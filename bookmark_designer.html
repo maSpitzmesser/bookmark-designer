@@ -1,0 +1,2497 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meine Bookmarks</title>
+<style>
+/* bookmarks.css – Lesezeichen als voll ausgefüllte App-Icons auf Liquid-Glass-Docks.
+   Hell/Dunkel folgt automatisch der Systemeinstellung. */
+
+/* Winkel der Lichtkante; wird per JS dem Mauszeiger nachgeführt und weich überblendet */
+:root {
+  color-scheme: light dark;
+  --bg: #e3e9f8;
+  --blob-1: #6fa8ff;
+  --blob-2: #ff8fc2;
+  --blob-3: #ffc971;
+  --blob-4: #7fe0bd;
+  --orb-1: rgba(255, 140, 90, 0.75);
+  --orb-2: rgba(90, 120, 255, 0.65);
+  --label: #14151a;
+  --label-2: #4d4f59;
+  --label-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+
+  /* Glas (Aufbau nach der Vorlage: getönter Grund, Weichzeichner, Lichtkanten aus Hell- und Dunkel-Reflexen) */
+  --c-glass: #bbbbbc;
+  --c-light: #fff;
+  --c-dark: #000;
+  --glass-reflex-dark: 1;
+  --glass-reflex-light: 1;
+  --saturation: 140%;
+  --icon-size: 60px;
+  --icon-radius: calc(var(--icon-size) * 0.225);
+  --glass-fill: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.07));
+  --glass-rim:
+    inset 0 0 0 0.5px rgb(255 255 255 / calc(0.16 * var(--glass-reflex-light))),
+    inset 0 1px 0 rgb(255 255 255 / calc(0.55 * var(--glass-reflex-light))),
+    inset 0 -1px 0 rgb(0 0 0 / calc(0.18 * var(--glass-reflex-dark))),
+    inset 0 0 14px rgb(255 255 255 / calc(0.06 * var(--glass-reflex-light))),
+    0 1px 2px rgb(0 0 0 / calc(0.06 * var(--glass-reflex-dark))),
+    0 8px 24px rgb(0 0 0 / calc(0.10 * var(--glass-reflex-dark)));
+
+  --bar: #ffffff;
+  --bar-ring: rgba(0, 0, 0, 0.08);
+
+  --tip-bg: rgba(28, 28, 34, 0.5);
+  --tint: #007aff;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #05060c;
+    --blob-1: #2144b8;
+    --blob-2: #8a2fae;
+    --blob-3: #9a5214;
+    --blob-4: #12796a;
+    --orb-1: rgba(255, 110, 70, 0.5);
+    --orb-2: rgba(70, 110, 255, 0.5);
+    --label: #ffffff;
+    --label-2: #a6a6ae;
+    --label-shadow: 0 1px 5px rgba(0, 0, 0, 0.6);
+
+    --glass-reflex-dark: 1.6;
+    --glass-reflex-light: 0.6;
+    --saturation: 140%;
+    --specular-a: rgba(255, 255, 255, 0.7);
+    --specular-b: rgba(255, 255, 255, 0.42);
+    --glass-fill: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05));
+
+    --bar: #2c2c2e;
+    --bar-ring: rgba(255, 255, 255, 0.1);
+
+    --tip-bg: rgba(20, 20, 26, 0.5);
+    --tint: #0a84ff;
+  }
+}
+
+[hidden] { display: none !important; }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--label);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 22px;
+  letter-spacing: -0.022em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Bunter Untergrund mit klaren Kanten – daran bricht und färbt sich das Glas */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 80% 24%, var(--orb-1) 0 8.5rem, transparent calc(8.5rem + 1px)),
+    radial-gradient(circle at 16% 74%, var(--orb-2) 0 11rem, transparent calc(11rem + 1px)),
+    radial-gradient(38rem 30rem at 6% 4%, var(--blob-1), transparent 70%),
+    radial-gradient(34rem 28rem at 96% 10%, var(--blob-2), transparent 70%),
+    radial-gradient(40rem 30rem at 82% 100%, var(--blob-3), transparent 70%),
+    radial-gradient(36rem 30rem at 8% 96%, var(--blob-4), transparent 70%);
+}
+
+.wrap {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: calc(40px + env(safe-area-inset-top, 0px)) 20px calc(56px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Gruppe */
+.sec { margin-top: 30px; }
+.sec:first-child { margin-top: 0; }
+.sec.is-closed { margin-top: 14px; }
+
+.sec-title {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 14px 8px;
+  font: inherit;
+}
+
+.sec.is-closed .sec-title { margin-bottom: 0; }
+
+/* Gruppenname als Glas-Kapsel, die sich antippen und ein-/ausklappen lässt */
+.sec-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 8px 8px 14px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bar);
+  box-shadow:
+    inset 0 0 0 0.5px var(--bar-ring),
+    0 1px 2px rgba(15, 20, 60, 0.12),
+    0 6px 14px -6px rgba(15, 20, 60, 0.22);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.25s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.sec-head:hover { transform: scale(1.04); }
+.sec-head:active { transform: scale(0.96); transition-duration: 0.08s; }
+.sec-head:focus-visible { outline: 3px solid var(--tint); outline-offset: 2px; }
+
+.chev {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: -3px 1px 0 0;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  border-radius: 1px;
+  opacity: 0.65;
+  transform: rotate(45deg);
+  transition: transform 0.28s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.is-closed .chev { margin: 0 3px 0 -2px; transform: rotate(-45deg); }
+
+.sec-name {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.crumb { font-size: 12px; color: var(--label-2); }
+
+.sec-count {
+  min-width: 24px;
+  padding: 1px 7px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--label-2);
+  background: rgba(120, 120, 128, 0.2);
+  border-radius: 999px;
+}
+
+/* Das Dock: Liquid Glass wie bei iOS 26 (klar, leicht aufgehellt, weiche Eckenform, feine Lichtkante) */
+.dock {
+  position: relative;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 16px 10px;
+  max-width: 100%;
+  padding: 24px 18px 12px;
+  border-radius: calc(var(--icon-size) * 0.56);
+  corner-shape: squircle; /* weiche, durchgehend gekrümmte Ecken wie bei Apple (wo der Browser es kann) */
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
+  backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
+  box-shadow: var(--glass-rim);
+}
+
+/* Lichtkante: oben entlang der ganzen Kante, unten rechts in der Ecke */
+.dock::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  border-radius: inherit;
+  corner-shape: inherit;
+  background:
+    linear-gradient(180deg, var(--specular-a) 0, rgba(255, 255, 255, 0) 30%),
+    radial-gradient(60% 95% at 100% 100%, var(--specular-b) 0, rgba(255, 255, 255, 0) 62%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  width: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+/* App-Symbol: voll ausgefüllte, blickdichte Kachel, kein Glas */
+.icon {
+  position: relative;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  display: grid;
+  place-items: center;
+  border-radius: var(--icon-radius);
+  corner-shape: squircle;
+  background: linear-gradient(180deg, var(--c1, #8e8e93), var(--c2, #6e6e73));
+  box-shadow:
+    inset 0 0 0 0.5px rgba(0, 0, 0, 0.14),
+    0 7px 14px rgba(15, 20, 60, 0.3),
+    0 1px 2px rgba(15, 20, 60, 0.25);
+  overflow: hidden;
+  transform-origin: 50% 100%;
+  transition: transform 0.2s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.icon img { display: block; }
+
+/* großes Bild von der Seite füllt die ganze Kachel */
+.icon img.fill { width: 100%; height: 100%; object-fit: cover; }
+
+/* Logo mit eigener Fläche: Kachel hat dessen Randfarbe, das Logo sitzt ganz in der Mitte */
+.icon img.badge { width: 48px; height: 48px; image-rendering: pixelated; }
+
+/* freigestelltes Zeichen: weiß auf farbiger Kachel */
+.icon img.glyph {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  filter: brightness(0) invert(1) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+}
+
+.icon img.glyph-hi {
+  width: 38px;
+  height: 38px;
+  filter: brightness(0) invert(1) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+}
+
+.icon img.smooth { image-rendering: auto; }
+
+.icon.letter {
+  color: #fff;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+
+/* Dock-Vergrößerung: Symbol unter dem Zeiger plus die direkten Nachbarn */
+.app:hover .icon,
+.app:focus-visible .icon { transform: scale(1.32); }
+
+.app:hover + .app .icon,
+.app:has(+ .app:hover) .icon { transform: scale(1.14); }
+
+.app:active .icon { transform: scale(1.2); transition-duration: 0.08s; }
+
+.app:focus-visible .icon { outline: 3px solid var(--tint); outline-offset: 2px; }
+
+.name {
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-align: center;
+  text-shadow: var(--label-shadow);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tooltip aus dunklem Glas mit dem vollen Titel */
+.tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  z-index: 10;
+  width: max-content;
+  max-width: min(16rem, 86vw);
+  padding: 7px 13px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-align: center;
+  color: #fff;
+  background: var(--tip-bg);
+  -webkit-backdrop-filter: blur(8px) saturate(var(--saturation));
+  backdrop-filter: blur(8px) saturate(var(--saturation));
+  border-radius: 16px;
+  box-shadow: var(--glass-rim);
+  overflow-wrap: anywhere;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(calc(-50% + var(--dx, 0px)), 6px);
+  transition: opacity 0.12s, transform 0.18s;
+}
+
+.app:hover .tip,
+.app:focus-visible .tip {
+  opacity: 1;
+  transform: translate(calc(-50% + var(--dx, 0px)), -14px);
+}
+
+@media (hover: none) { .tip { display: none; } }
+
+@media (max-width: 30rem) {
+  .wrap { padding-left: 14px; padding-right: 14px; }
+  :root { --icon-size: 56px; }
+  .dock { padding: 20px 10px 10px; gap: 14px 4px; }
+  .app { width: 72px; }
+  .icon img.badge { width: 44px; height: 44px; }
+}
+
+/* Wer weniger Transparenz eingestellt hat, bekommt ruhige, blickdichte Flächen */
+@media (prefers-reduced-transparency: reduce) {
+  .dock, .tip {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: var(--bg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+  .app:hover .icon, .app:focus-visible .icon,
+  .app:hover + .app .icon, .app:has(+ .app:hover) .icon { transform: none; }
+}
+
+/* ---------- Import-Oberfläche ---------- */
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-bottom: 22px;
+}
+
+.status {
+  flex: 1 1 14rem;
+  min-width: 0;
+  margin: 0 0 0 8px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--label-2);
+  text-shadow: var(--label-shadow);
+  overflow-wrap: anywhere;
+}
+
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 17px;
+  border: 0;
+  color: inherit;
+  font: 600 15px/20px var(--font);
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  border-radius: 999px;
+  background: var(--bar);
+  box-shadow:
+    inset 0 0 0 0.5px var(--bar-ring),
+    0 1px 2px rgba(15, 20, 60, 0.12),
+    0 6px 14px -6px rgba(15, 20, 60, 0.22);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.25s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.btn:hover { transform: scale(1.04); }
+.btn:active { transform: scale(0.96); transition-duration: 0.08s; }
+.btn:focus-within { outline: 3px solid var(--tint); outline-offset: 2px; }
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.empty {
+  max-width: 28rem;
+  margin: 12vh auto 0;
+  padding: 34px 30px 30px;
+  text-align: center;
+  background: var(--bar);
+  border-radius: 32px;
+  box-shadow:
+    inset 0 0 0 0.5px var(--bar-ring),
+    0 2px 4px rgba(15, 20, 60, 0.1),
+    0 24px 48px -12px rgba(15, 20, 60, 0.3);
+}
+
+.empty h2 {
+  margin: 0 0 8px;
+  font-size: 26px;
+  line-height: 32px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.empty p { margin: 0 0 22px; color: var(--label-2); }
+
+/* Datei über die Seite ziehen */
+body.is-drop::after {
+  content: "";
+  position: fixed;
+  inset: 14px;
+  z-index: 50;
+  border: 3px dashed var(--tint);
+  border-radius: 36px;
+  background: color-mix(in srgb, var(--tint) 10%, transparent);
+  pointer-events: none;
+}
+
+
+
+/* ---------- Bearbeiten-Modus ---------- */
+
+.btn:disabled { opacity: 0.45; pointer-events: none; }
+.btn-primary { background: var(--tint); color: #fff; }
+
+.del {
+  position: absolute;
+  top: -7px;
+  left: 3px;
+  z-index: 6;
+  display: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ff3b30;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.9), 0 2px 6px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.del::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: #fff;
+}
+
+.editing .del { display: block; }
+.editing .tip { display: none; }
+.editing .app { user-select: none; -webkit-user-select: none; cursor: grab; }
+
+@keyframes jiggle {
+  0% { transform: rotate(-1.6deg); }
+  50% { transform: rotate(1.6deg); }
+  100% { transform: rotate(-1.6deg); }
+}
+
+.editing .app:not(.add-tile) .icon { animation: jiggle 0.26s ease-in-out infinite; }
+.editing .app:nth-child(2n) .icon { animation-duration: 0.29s; animation-delay: -0.09s; }
+.editing .app:nth-child(3n) .icon { animation-duration: 0.24s; animation-delay: -0.17s; }
+
+/* Im Bearbeiten-Modus keine Dock-Vergrößerung */
+.editing .app:hover .icon,
+.editing .app:focus-visible .icon,
+.editing .app:hover + .app .icon,
+.editing .app:has(+ .app:hover) .icon { transform: none; }
+
+.is-dragging { opacity: 0.35; }
+
+.drop-bar {
+  position: absolute;
+  z-index: 7;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--tint);
+  box-shadow: 0 0 10px var(--tint);
+  pointer-events: none;
+  transition: left 0.08s, top 0.08s;
+}
+
+.add-tile {
+  display: none;
+  font: inherit;
+  letter-spacing: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.editing .add-tile { display: flex; }
+
+.add-icon {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 2.5px dashed var(--label-2);
+  opacity: 0.85;
+}
+
+.add-icon::before {
+  content: "+";
+  font-size: 30px;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--label-2);
+}
+
+.editing .add-tile:hover .icon { transform: scale(1.08); }
+
+.dock-empty {
+  align-self: center;
+  padding: 16px 18px;
+  font-size: 13px;
+  color: var(--label-2);
+  text-shadow: var(--label-shadow);
+}
+
+.editing .dock-empty::after { content: " · hierher ziehen"; }
+
+.board-empty { max-width: 28rem; margin: 10vh auto 0; text-align: center; color: var(--label-2); }
+
+/* Dialog „Lesezeichen hinzufügen“ */
+.modal {
+  width: min(26rem, calc(100vw - 32px));
+  padding: 0;
+  color: var(--label);
+  background: var(--bar);
+  border: 0;
+  border-radius: 28px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+}
+
+.modal::backdrop {
+  background: rgba(10, 12, 30, 0.45);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.modal form { display: flex; flex-direction: column; gap: 14px; padding: 26px 24px 22px; }
+.modal h3 { margin: 0; font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: 0.01em; }
+
+.modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label-2);
+}
+
+.modal input {
+  padding: 11px 14px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--label);
+  background: rgba(120, 120, 128, 0.14);
+  border: 0;
+  border-radius: 12px;
+  outline: none;
+}
+
+.modal input:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint) 35%, transparent); }
+.form-error { margin: 0; font-size: 13px; color: #ff3b30; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+
+/* Meldung mit „Rückgängig“ */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 12px 11px 18px;
+  font-size: 14px;
+  color: #fff;
+  background: #1c1c1e;
+  border-radius: 999px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  transform: translateX(-50%);
+}
+
+.toast button {
+  padding: 4px 10px;
+  font: inherit;
+  font-weight: 600;
+  color: #7fb4ff;
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editing .app .icon { animation: none !important; }
+}
+
+/* ---------- Hintergrund ---------- */
+
+#bgLayer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+body.has-bg #bgLayer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.bg-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.9s ease;
+}
+
+/* Eigener Hintergrund: Standard-Verlauf ausblenden, Schrift auf dem Bild hell */
+body.has-bg::before { display: none; }
+
+body.has-bg {
+  --label: #fff;
+  --label-2: rgba(255, 255, 255, 0.82);
+  --label-shadow: 0 0 3px rgba(0, 0, 0, 0.55), 0 1px 6px rgba(0, 0, 0, 0.6);
+  --c-glass: #2a2e36;
+  --glass-reflex-dark: 1.5;
+  --glass-reflex-light: 0.8;
+}
+
+/* Sehr helles Bild: dunkleres Glas, damit die weiße Schrift lesbar bleibt */
+body.has-bg.bg-bright {
+  --glass-fill: linear-gradient(180deg, rgba(18, 22, 32, 0.38), rgba(18, 22, 32, 0.26));
+}
+
+/* Deckende Bedienelemente behalten ihre eigene Schriftfarbe */
+:root { --bar-text: #14151a; --bar-text-2: #5b5c63; }
+
+@media (prefers-color-scheme: dark) {
+  :root { --bar-text: #fff; --bar-text-2: #a6a6ae; }
+}
+
+.sec-head, .btn, .empty, .modal {
+  --label: var(--bar-text);
+  --label-2: var(--bar-text-2);
+  color: var(--bar-text);
+}
+
+.btn-primary { color: #fff; }
+
+/* Ohne Lichtbrechung (Schalter im Dialog) */
+.no-lens .dock {
+  -webkit-backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94) !important;
+  backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94) !important;
+}
+
+/* Dialog */
+.modal-wide { width: min(46rem, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
+.modal-wide .modal-body { display: flex; flex-direction: column; gap: 14px; padding: 26px 24px 22px; }
+.modal-wide h3 { margin: 0; font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: 0.01em; }
+
+.seg { display: flex; gap: 4px; padding: 4px; background: rgba(120, 120, 128, 0.16); border-radius: 999px; }
+
+.seg-btn {
+  flex: 1;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--bar-text-2);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.seg-btn[aria-selected="true"] { color: var(--bar-text); background: var(--bar); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); }
+.seg-btn:focus-visible { outline: 3px solid var(--tint); outline-offset: 2px; }
+
+.bg-panel { display: flex; flex-direction: column; gap: 12px; min-height: 8rem; }
+.bg-form { display: flex; flex-direction: column; gap: 12px; }
+.hint { margin: 0; font-size: 13px; line-height: 18px; color: var(--bar-text-2); }
+.hint a { color: var(--tint); }
+.bg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.bg-select { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; margin-left: auto; font-size: 13px; color: var(--bar-text-2); }
+.bg-select select { font: inherit; font-size: 14px; color: var(--bar-text); background: rgba(120, 120, 128, 0.16); border: 0; border-radius: 10px; padding: 7px 10px; }
+
+.bg-panel input[type="search"],
+.bg-panel input[type="text"],
+.bg-form input[type="text"] {
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--bar-text);
+  background: rgba(120, 120, 128, 0.14);
+  border: 0;
+  border-radius: 12px;
+  outline: none;
+}
+
+.bg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 10px;
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.bg-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 0 8px;
+  font: inherit;
+  text-align: left;
+  color: var(--bar-text);
+  background: rgba(120, 120, 128, 0.12);
+  border: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.bg-item img, .bg-ph { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: rgba(120, 120, 128, 0.25); }
+.bg-label { padding: 0 10px; font-size: 13px; line-height: 17px; font-weight: 600; letter-spacing: 0; }
+.bg-item:hover { background: rgba(120, 120, 128, 0.24); }
+.bg-item.is-active { box-shadow: 0 0 0 3px var(--tint); }
+.bg-item:focus-visible { outline: 3px solid var(--tint); outline-offset: 2px; }
+
+.check { display: flex; align-items: baseline; gap: 8px; font-size: 14px; color: var(--bar-text); }
+.check span { font-size: 12px; color: var(--bar-text-2); }
+
+/* Feinschliff im Dialog (überstimmt die allgemeinen Formular-Regeln des Dialogs „Lesezeichen hinzufügen“) */
+.modal label.btn { flex-direction: row; gap: 8px; font: 600 15px/20px var(--font); color: var(--bar-text); }
+.modal label.btn.btn-primary, .modal .btn.btn-primary { color: #fff; }
+.modal .btn:not(.btn-primary) { background: rgba(120, 120, 128, 0.2); }
+.modal .bg-select { flex-direction: row; align-items: center; gap: 8px; margin-left: auto; font-size: 13px; color: var(--bar-text-2); }
+.modal .check { flex-direction: row; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 400; color: var(--bar-text); }
+.modal input[type="checkbox"] { flex: none; width: 18px; height: 18px; padding: 0; background: none; border-radius: 4px; accent-color: var(--tint); }
+
+/* === Liquid Glass (iOS 26): klar, kaum aufgehellt, feine Lichtkante === */
+:root {
+  --saturation: 125%;
+  --glass-fill: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  --glass-rim:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.12),
+    inset 0 0 18px rgb(255 255 255 / 0.05);
+  --specular-a: 0.95;
+  --specular-b: 0.65;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --specular-a: 0.75; --specular-b: 0.5; --glass-fill: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)); }
+}
+.dock { box-shadow: var(--glass-rim); }
+.dock::after {
+  padding: 1.5px;
+  background:
+    radial-gradient(75% 130% at 22% 0, rgb(255 255 255 / var(--specular-a)) 0, rgb(255 255 255 / 0) 62%),
+    radial-gradient(55% 110% at 100% 100%, rgb(255 255 255 / var(--specular-b)) 0, rgb(255 255 255 / 0) 62%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0.04));
+}
+
+/* === Hamburger-Menü für die Einstellungen === */
+.menu { position: relative; flex: none; margin-left: auto; z-index: 30; }
+.menu-btn { width: 44px; height: 44px; padding: 0; justify-content: center; }
+.menu-btn .bars, .menu-btn .bars::before, .menu-btn .bars::after {
+  display: block; width: 18px; height: 2px; border-radius: 2px; background: var(--bar-text);
+  transition: transform 0.25s cubic-bezier(0.3, 1.5, 0.5, 1), background 0.2s;
+}
+.menu-btn .bars { position: relative; }
+.menu-btn .bars::before, .menu-btn .bars::after { content: ""; position: absolute; left: 0; }
+.menu-btn .bars::before { top: -6px; }
+.menu-btn .bars::after { top: 6px; }
+.menu.open .bars { background: transparent; }
+.menu.open .bars::before { transform: translateY(6px) rotate(45deg); }
+.menu.open .bars::after { transform: translateY(-6px) rotate(-45deg); }
+.menu .actions {
+  display: none; position: absolute; right: 0; top: calc(100% + 10px);
+  flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 2px;
+  min-width: 230px; padding: 8px; border-radius: 22px; background: var(--bar);
+  box-shadow: inset 0 0 0 0.5px var(--bar-ring), 0 2px 6px rgba(15,20,60,.15), 0 18px 40px -8px rgba(15,20,60,.35);
+}
+.menu.open .actions { display: flex; animation: menuIn 0.22s cubic-bezier(0.3, 1.4, 0.5, 1); transform-origin: top right; }
+@keyframes menuIn { from { opacity: 0; transform: scale(0.92) translateY(-6px); } }
+.menu .actions .btn { width: 100%; justify-content: flex-start; padding: 11px 14px; border-radius: 14px; background: transparent; box-shadow: none; }
+.menu .actions .btn:hover { transform: none; background: rgba(120, 120, 128, 0.18); }
+.menu .actions .btn:disabled { opacity: 0.4; }
+</style>
+</head>
+<body>
+<div id="bgLayer" aria-hidden="true"></div>
+<main class="wrap">
+  <div class="bar">
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="menu" id="menu">
+    <button class="btn menu-btn" type="button" id="btnMenu" aria-label="Menü" aria-haspopup="true" aria-expanded="false"><span class="bars"></span></button>
+    <div class="actions">
+      <button class="btn" type="button" id="btnBg">Hintergrund</button>
+      <button class="btn" type="button" id="btnUndo" hidden>Rückgängig</button>
+      <button class="btn" type="button" id="btnEdit" hidden>Bearbeiten</button>
+      <button class="btn" type="button" id="btnDownload" hidden>Herunterladen</button>
+      <button class="btn" type="button" id="btnMain" hidden>Ordner verbinden</button>
+      <button class="btn" type="button" id="btnFolder" hidden>Ordner ändern</button>
+      <label class="btn" for="fileInput">
+        Datei importieren
+        <input class="sr" type="file" id="fileInput" accept=".html,.htm,text/html">
+      </label>
+    </div>
+    </div>
+  </div>
+
+  <div id="board"></div>
+
+  <section class="empty" id="empty" hidden>
+    <h2>Noch keine Lesezeichen</h2>
+    <p id="emptyText"></p>
+  </section>
+</main>
+
+<dialog class="modal" id="addDialog" aria-labelledby="addHeading">
+  <form id="addForm" novalidate>
+    <h3 id="addHeading">Lesezeichen hinzufügen</h3>
+    <label>Adresse
+      <input type="text" id="addUrl" inputmode="url" autocomplete="off" spellcheck="false" placeholder="beispiel.de">
+    </label>
+    <label>Titel (optional)
+      <input type="text" id="addName" autocomplete="off" placeholder="Wird sonst aus der Adresse gebildet">
+    </label>
+    <p class="form-error" id="addError" hidden></p>
+    <div class="modal-actions">
+      <button class="btn" type="button" id="addCancel">Abbrechen</button>
+      <button class="btn btn-primary" type="submit">Hinzufügen</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="modal modal-wide" id="bgDialog" aria-labelledby="bgHeading">
+  <div class="modal-body">
+    <h3 id="bgHeading">Hintergrund</h3>
+    <div class="seg" role="tablist" aria-label="Quelle des Hintergrunds">
+      <button type="button" class="seg-btn" role="tab" data-tab="apple" aria-selected="true">Apple TV</button>
+      <button type="button" class="seg-btn" role="tab" data-tab="file" aria-selected="false">Eigene Datei</button>
+      <button type="button" class="seg-btn" role="tab" data-tab="url" aria-selected="false">Adresse</button>
+      <button type="button" class="seg-btn" role="tab" data-tab="gradient" aria-selected="false">Verlauf</button>
+    </div>
+
+    <section class="bg-panel" data-panel="apple">
+      <p class="hint">Die Videos des Apple-TV-Bildschirmschoners werden direkt von Apple gestreamt. Jedes Video ist mehrere hundert Megabyte groß. Zuerst brauchst du Apples Katalog (die Liste aller Videos).</p>
+      <div class="bg-row">
+        <button class="btn" type="button" id="bgLoadApple">Katalog von Apple laden</button>
+        <label class="btn" for="bgCatalogFile">Katalogdatei wählen
+          <input class="sr" type="file" id="bgCatalogFile" accept=".tar,.json,.gz,application/json,application/x-tar">
+        </label>
+        <label class="bg-select">Qualität
+          <select id="bgQuality">
+            <option value="hd">1080p (H.264)</option>
+            <option value="uhd">4K</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint">Klappt das direkte Laden nicht, lade die Datei selbst herunter und wähle sie bei „Katalogdatei wählen“ aus:
+        <a href="https://sylvan.apple.com/itunes-assets/Aerials126/v4/c0/45/d9/c045d9d0-9606-1535-62fe-189edb4f79eb/resources-atv-23J-2.tar" target="_blank" rel="noopener noreferrer">resources-atv-23J-2.tar</a>
+        (tvOS 26, die Adresse kann sich mit neuen Versionen ändern).</p>
+      <input type="search" id="bgFilter" placeholder="Orte durchsuchen, zum Beispiel Dubai" autocomplete="off" hidden>
+      <p class="hint" id="bgCatalogInfo"></p>
+      <div class="bg-grid" id="bgGrid"></div>
+    </section>
+
+    <section class="bg-panel" data-panel="file" hidden>
+      <p class="hint">Ein Bild oder Video von deinem Rechner. Die Datei wird im Browser gespeichert und beim nächsten Öffnen wieder angezeigt. Videos laufen stumm in Dauerschleife.</p>
+      <div class="bg-row">
+        <label class="btn btn-primary" for="bgFile">Datei wählen
+          <input class="sr" type="file" id="bgFile" accept="image/*,video/*">
+        </label>
+      </div>
+    </section>
+
+    <section class="bg-panel" data-panel="url" hidden>
+      <form id="bgUrlForm" class="bg-form" novalidate>
+        <p class="hint">Direkte Adresse eines Bildes (JPG, PNG, WebP) oder Videos (MP4, WebM).</p>
+        <input type="text" id="bgUrl" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://…">
+        <div class="bg-row"><button class="btn btn-primary" type="submit">Übernehmen</button></div>
+      </form>
+    </section>
+
+    <section class="bg-panel" data-panel="gradient" hidden>
+      <p class="hint">Der farbige Standard-Verlauf.</p>
+      <div class="bg-row"><button class="btn btn-primary" type="button" id="bgGradient">Verlauf verwenden</button></div>
+    </section>
+
+    <p class="form-error" id="bgMsg" role="alert" hidden></p>
+    <label class="check"><input type="checkbox" id="bgLens" checked> Lichtbrechung am Glas <span>Bei Videos kann sie den Rechner stark belasten.</span></label>
+    <div class="modal-actions"><button class="btn btn-primary" type="button" id="bgClose">Fertig</button></div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" hidden>
+  <span id="toastText"></span>
+  <button type="button" id="toastUndo">Rückgängig</button>
+</div>
+
+<script>
+/* Bookmark Designer – Skript */
+(() => {
+  'use strict';
+
+  const h = (tag, props = {}, ...kids) => {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    el.append(...kids.flat().filter(Boolean));
+    return el;
+  };
+
+  const safeUrl = (href) => {
+    try {
+      const u = new URL(href);
+      return /^(https?|ftp|file):$/.test(u.protocol) ? u : null; // keine javascript:-Bookmarklets
+    } catch { return null; }
+  };
+
+  const isLocal = (host) => /^(localhost|127\.|192\.168\.|10\.|\[?::1)/.test(host);
+
+  // Ergänzt fehlende Protokolle: „beispiel.de“ wird zu https://beispiel.de, „localhost:8080“ zu http://localhost:8080
+  const normalizeInput = (value) => {
+    const v = value.trim();
+    if (!v) return v;
+    if (/^[^/\s]+:\d+(\/|$)/.test(v)) return `http://${v}`;
+    return /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`;
+  };
+
+  const hue = (s) => {
+    let n = 0;
+    for (const c of s) n = (n * 31 + c.charCodeAt(0)) % 360;
+    return n;
+  };
+
+  // "www.zalando.de" -> "Zalando", "gomez.com.de" -> "Gomez", "127.0.0.1:7860" -> "Lokal:7860"
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  function appName(url) {
+    // Lokale Dateien (file:///...) haben keinen Hostnamen: Name aus dem Pfad nehmen
+    if (url.protocol === 'file:') {
+      let path = url.pathname;
+      try { path = decodeURIComponent(path); } catch { /* Pfad unverändert lassen */ }
+      const parts = path.split('/').filter(Boolean);
+      let last = parts.pop() || '';
+      if (/^index\.html?$/i.test(last) && parts.length) last = parts.pop();
+      return cap(last.replace(/\.[a-z0-9]+$/i, '') || 'Datei');
+    }
+    if (isLocal(url.hostname)) return url.port ? `Lokal:${url.port}` : 'Lokal';
+    const labels = url.hostname.replace(/^www\./, '').split('.');
+    let name = labels[0];
+    if (labels.length >= 2) {
+      const sld = ['co', 'com', 'org', 'net', 'gov', 'ac'];
+      const cc = labels[labels.length - 1].length === 2 && sld.includes(labels[labels.length - 2]);
+      name = labels[labels.length - (cc && labels.length >= 3 ? 3 : 2)];
+    }
+    return cap(name || url.hostname || 'Link');
+  }
+
+  /* ---------- Datenmodell (Netscape-Bookmark-Format) ---------- */
+  // Die Datei wird in einen Baum aus Ordnern und Lesezeichen eingelesen. Alle Attribute der Originaldatei
+  // (ADD_DATE, ICON, LAST_MODIFIED, ...) bleiben erhalten, damit sich die geänderte Datei später
+  // wieder in jeden Browser importieren lässt.
+
+  let uid = 0;
+  const nextId = () => `n${++uid}`;
+  const attrsOf = (el) => Object.fromEntries([...el.attributes].map((a) => [a.name, a.value]));
+
+  // Aus Titel, Adresse und Icon werden die Anzeigewerte abgeleitet
+  function decorate(item) {
+    const url = safeUrl(item.attrs.href || '');
+    item.url = url;
+    item.hidden = !url; // Sonderadressen (javascript:, chrome://, place:) bleiben in der Datei, werden aber nicht angezeigt
+    if (url) {
+      item.label = appName(url);
+      item.letter = (item.label[0] || '?').toUpperCase();
+      const ic = item.attrs.icon || '';
+      item.icon = /^(data:image\/|https?:)/i.test(ic) ? ic : null;
+      item.title = item.rawTitle.trim() || url.hostname || url.href;
+    }
+    return item;
+  }
+
+  const makeItem = (attrs, rawTitle) => decorate({ kind: 'item', id: nextId(), attrs, rawTitle, desc: '' });
+
+  function readChildren(dl, folder) {
+    let last = null;
+    for (const el of dl.children) {
+      if (el.tagName === 'DD') { if (last && last.kind === 'item') last.desc = el.textContent.trim(); continue; }
+      if (el.tagName !== 'DT') continue;
+      const head = el.firstElementChild;
+      if (!head) continue;
+
+      if (head.tagName === 'A') {
+        last = makeItem(attrsOf(head), head.textContent);
+        folder.children.push(last);
+      } else if (head.tagName === 'H3') {
+        // Je nach Export steckt die Unterliste im <dt> oder direkt dahinter.
+        const sub = el.querySelector(':scope > dl')
+          || (el.nextElementSibling && el.nextElementSibling.tagName === 'DL' ? el.nextElementSibling : null);
+        last = { kind: 'folder', id: nextId(), name: head.textContent.trim(), attrs: attrsOf(head), children: [] };
+        if (sub) readChildren(sub, last);
+        folder.children.push(last);
+      }
+    }
+  }
+
+  function parseModel(text) {
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    const rootDl = doc.querySelector('dl');
+    if (!rootDl) return null;
+    const root = { kind: 'folder', id: nextId(), name: null, attrs: {}, children: [] };
+    readChildren(rootDl, root);
+    if (!root.children.length) return null;
+    const h1 = doc.querySelector('h1');
+    return {
+      title: (doc.title || '').trim() || 'Bookmarks',
+      h1: (h1 && h1.textContent.trim()) || 'Bookmarks',
+      eol: text.includes('\r\n') ? '\r\n' : '\n',
+      root,
+    };
+  }
+
+  const escText = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const escAttr = (s) => escText(s).replace(/"/g, '&quot;');
+  const attrString = (attrs) => Object.entries(attrs).map(([k, v]) => ` ${k.toUpperCase()}="${escAttr(v)}"`).join('');
+
+  // Schreibt das Modell im selben Format zurück, das auch Chrome, Edge, Firefox und Safari exportieren
+  function serialize(m) {
+    const lines = [
+      '<!DOCTYPE NETSCAPE-Bookmark-file-1>',
+      '<!-- This is an automatically generated file.',
+      '     It will be read and overwritten.',
+      '     DO NOT EDIT! -->',
+      '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
+      `<TITLE>${escText(m.title)}</TITLE>`,
+      `<H1>${escText(m.h1)}</H1>`,
+      '<DL><p>',
+    ];
+    (function walk(folder, depth) {
+      const pad = '    '.repeat(depth);
+      for (const n of folder.children) {
+        if (n.kind === 'item') {
+          lines.push(`${pad}<DT><A${attrString(n.attrs)}>${escText(n.rawTitle)}</A>`);
+          if (n.desc) lines.push(`${pad}<DD>${escText(n.desc)}`);
+        } else {
+          lines.push(`${pad}<DT><H3${attrString(n.attrs)}>${escText(n.name)}</H3>`);
+          lines.push(`${pad}<DL><p>`);
+          walk(n, depth + 1);
+          lines.push(`${pad}</DL><p>`);
+        }
+      }
+    })(m.root, 1);
+    lines.push('</DL><p>');
+    return lines.join(m.eol) + m.eol;
+  }
+
+  // Tooltip bleibt im sichtbaren Bereich, auch bei Icons am Rand
+  function keepTipInView(app) {
+    const tip = app.querySelector('.tip');
+    tip.style.setProperty('--dx', '0px');
+    const r = tip.getBoundingClientRect();
+    const m = 8;
+    let dx = 0;
+    if (r.left < m) dx = m - r.left;
+    else if (r.right > window.innerWidth - m) dx = window.innerWidth - m - r.right;
+    tip.style.setProperty('--dx', `${dx}px`);
+  }
+
+  // ---------- Icons: voll ausgefüllte Kacheln ----------
+  // Die Export-Datei enthält nur winzige 16x16-Favicons. Darum wird zusätzlich versucht,
+  // größere Versionen nachzuladen. Gelingt das nicht, bleibt das kleine Favicon bzw. der Buchstabe.
+  //   appleTouch: lädt /apple-touch-icon.png direkt von der jeweiligen Seite (180 px, füllt die Kachel).
+  //   google:     fragt zusätzlich Googles Favicon-Dienst ab. Dabei erfährt Google
+  //               alle Domains deiner Lesezeichen. Mit false ausschalten.
+  const HIRES = { appleTouch: true, google: true };
+
+  function hiresSources(item) {
+    const list = [];
+    const { protocol, origin, hostname } = item.url;
+    if (!/^https?:$/.test(protocol) || isLocal(hostname)) return list;
+    if (HIRES.appleTouch) list.push({ src: `${origin}/apple-touch-icon.png`, min: 100, kind: 'full' });
+    if (HIRES.google) {
+      list.push({ src: `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`, min: 48, kind: 'hi' });
+    }
+    return list;
+  }
+
+  const toHsl = (r, g, b) => {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    const d = max - min;
+    if (!d) return [0, 0, l];
+    const s = d / (1 - Math.abs(2 * l - 1));
+    let hh;
+    if (max === r) hh = ((g - b) / d) % 6;
+    else if (max === g) hh = (b - r) / d + 2;
+    else hh = (r - g) / d + 4;
+    return [(hh * 60 + 360) % 360, s, l];
+  };
+
+  const css = (hh, s, l) => `hsl(${Math.round(hh)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%)`;
+
+  // Liest die Pixel des eingebetteten Favicons: Ist es eine gefüllte Fläche (Logo mit eigenem
+  // Hintergrund) oder nur ein freigestelltes Zeichen? Und welche Farbe prägt es?
+  function analyzeIcon(img) {
+    try {
+      const n = Math.max(8, Math.min(img.naturalWidth || 16, 32));
+      const canvas = document.createElement('canvas');
+      canvas.width = n;
+      canvas.height = n;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, n, n);
+      const d = ctx.getImageData(0, 0, n, n).data;
+      const alpha = (x, y) => (x < 0 || y < 0 || x >= n || y >= n ? 0 : d[(y * n + x) * 4 + 3]);
+
+      let covered = 0;
+      const buckets = Array.from({ length: 12 }, () => ({ w: 0, r: 0, g: 0, b: 0 }));
+      const edge = { r: 0, g: 0, b: 0, n: 0 };
+
+      for (let y = 0; y < n; y++) {
+        for (let x = 0; x < n; x++) {
+          const i = (y * n + x) * 4;
+          if (d[i + 3] < 128) continue;
+          covered++;
+          const r = d[i];
+          const g = d[i + 1];
+          const b = d[i + 2];
+          if (alpha(x - 1, y) < 128 || alpha(x + 1, y) < 128 || alpha(x, y - 1) < 128 || alpha(x, y + 1) < 128) {
+            edge.r += r; edge.g += g; edge.b += b; edge.n++;
+          }
+          const [hh, s, l] = toHsl(r, g, b);
+          if (s > 0.25 && l > 0.12 && l < 0.92) {
+            const w = s * (1 - Math.abs(2 * l - 1));
+            const k = Math.floor(hh / 30) % 12;
+            buckets[k].w += w; buckets[k].r += r * w; buckets[k].g += g * w; buckets[k].b += b * w;
+          }
+        }
+      }
+
+      const best = buckets.reduce((a, b) => (b.w > a.w ? b : a));
+      return {
+        filled: covered / (n * n) >= 0.6,
+        dominant: best.w >= 0.6 ? toHsl(best.r / best.w, best.g / best.w, best.b / best.w) : null,
+        edge: edge.n ? toHsl(edge.r / edge.n, edge.g / edge.n, edge.b / edge.n) : null,
+      };
+    } catch { return null; }
+  }
+
+  // Kachelfarbe: gefüllte Logos behalten ihre Randfarbe, freigestellte Zeichen bekommen
+  // eine kräftige Farbe aus ihrem Logo (oder Graphit bei Schwarz-Weiß) und werden weiß darauf gesetzt.
+  function tileColors(a, label) {
+    if (a && a.filled && a.edge) {
+      const [hh, s, l] = a.edge;
+      return [css(hh, s, Math.min(1, l + 0.03)), css(hh, s, Math.max(0, l - 0.04))];
+    }
+    if (a && a.dominant) {
+      const [hh, s] = a.dominant;
+      const L = Math.min(0.52, Math.max(0.4, a.dominant[2]));
+      const S = Math.max(0.55, s);
+      return [css(hh, S, L + 0.07), css(hh, S, L - 0.06)];
+    }
+    if (a) return [css(220, 0.1, 0.32), css(220, 0.1, 0.2)];
+    const hh = hue(label);
+    return [css(hh, 0.85, 0.64), css(hh, 0.8, 0.48)];
+  }
+
+  function buildIcon(item) {
+    const icon = h('span', { class: 'icon', 'aria-hidden': 'true' });
+    let analysis = null;
+
+    const setColors = (c) => { icon.style.setProperty('--c1', c[0]); icon.style.setProperty('--c2', c[1]); };
+    setColors(tileColors(null, item.label));
+
+    const showLetter = () => { icon.classList.add('letter'); icon.replaceChildren(item.letter); };
+    const show = (img, kind) => {
+      img.className = kind;
+      img.draggable = false;
+      icon.classList.remove('letter');
+      icon.replaceChildren(img);
+    };
+
+    // Hochauflösende Quellen der Reihe nach probieren; die erste brauchbare ersetzt das Icon
+    const startHires = () => {
+      (function tryNext(list) {
+        const s = list.shift();
+        if (!s) return;
+        const img = new Image();
+        img.alt = '';
+        img.decoding = 'async';
+        img.onload = () => {
+          if (img.naturalWidth < s.min) { tryNext(list); return; }
+          const glyph = s.kind !== 'full' && analysis && !analysis.filled;
+          show(img, glyph ? 'glyph-hi' : 'fill');
+        };
+        img.onerror = () => tryNext(list);
+        img.src = s.src;
+      })(hiresSources(item));
+    };
+
+    // Eingebettetes Favicon sofort anzeigen, danach größere Versionen nachladen
+    if (item.icon) {
+      const img = new Image();
+      img.alt = '';
+      img.onload = () => {
+        analysis = analyzeIcon(img);
+        setColors(tileColors(analysis, item.label));
+        show(img, analysis && analysis.filled ? 'badge' : 'glyph');
+        if (img.naturalWidth > 20) img.classList.add('smooth');
+        startHires();
+      };
+      img.onerror = () => { showLetter(); startHires(); };
+      img.src = item.icon;
+    } else {
+      showLetter();
+      startHires();
+    }
+
+    return icon;
+  }
+
+  function appLink(item) {
+    if (item._el) return item._el; // bereits aufgebautes Symbol (samt nachgeladenem Icon) wiederverwenden
+    const icon = buildIcon(item);
+    const del = h('span', { class: 'del', role: 'button', 'aria-label': `„${item.title}“ entfernen` });
+    del.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); removeItem(item); });
+
+    const a = h('a', { class: 'app', href: item.url.href, target: '_blank', rel: 'noopener noreferrer', draggable: 'true', 'aria-label': item.title },
+      icon,
+      h('span', { class: 'name', text: item.label }),
+      h('span', { class: 'tip', 'aria-hidden': 'true', text: item.title }),
+      del);
+    a._item = item;
+    a.addEventListener('pointerenter', () => keepTipInView(a));
+    a.addEventListener('focus', () => keepTipInView(a));
+    item._el = a;
+    return a;
+  }
+
+  /* ---------- Liquid Glass ---------- */
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const BEZEL = 26;   // Breite des Randbereichs, in dem das Glas das Bild dahinter bricht (px)
+  const BEND = 52;    // Stärke der Brechung (px-Skala der Verschiebung)
+
+  // Die Lichtbrechung nutzt backdrop-filter: url(#svg-filter). Das können nur Chromium-Browser
+  // (Chrome, Edge, Brave, Opera). Überall sonst bleibt es bei Weichzeichner und Glanzlichtern.
+  const canRefract = (() => {
+    const brands = navigator.userAgentData && navigator.userAgentData.brands;
+    return !!(brands && brands.some((b) => /Chrom/i.test(b.brand)));
+  })();
+
+  // Verschiebungskarte für ein abgerundetes Rechteck: Am Rand zeigt die Verschiebung
+  // nach innen und nimmt zur Mitte hin ab (Rot = x, Grün = y, 128 = keine Verschiebung).
+  // Berechnet wird nur der schmale Randstreifen, der Rest bleibt neutral. Fertige Karten werden wiederverwendet.
+  const lensCache = new Map();
+
+  function lensMap(w, hgt, radius) {
+    const key = `${w}x${hgt}r${radius}`;
+    if (lensCache.has(key)) return lensCache.get(key);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = hgt;
+    const ctx = canvas.getContext('2d');
+    const img = ctx.createImageData(w, hgt);
+    new Uint32Array(img.data.buffer).fill(0xff808080); // 128/128/128, deckend: keine Verschiebung
+    const d = img.data;
+    const hw = w / 2;
+    const hh = hgt / 2;
+
+    const pixel = (x, y) => {
+      const px = x + 0.5 - hw;
+      const py = y + 0.5 - hh;
+      const qx = Math.abs(px) - (hw - radius);
+      const qy = Math.abs(py) - (hh - radius);
+      const ox = Math.max(qx, 0);
+      const oy = Math.max(qy, 0);
+      const outer = Math.hypot(ox, oy);
+      const depth = -(outer + Math.min(Math.max(qx, qy), 0) - radius); // Abstand zum Rand nach innen
+      if (depth < 0 || depth >= BEZEL) return;
+
+      let gx;
+      let gy;
+      if (outer > 0) { gx = (Math.sign(px) * ox) / outer; gy = (Math.sign(py) * oy) / outer; }
+      else if (qx > qy) { gx = Math.sign(px); gy = 0; }
+      else { gx = 0; gy = Math.sign(py); }
+      const t = 1 - depth / BEZEL;
+      const m = Math.pow(t, 2); // stark am Rand, fällt schnell ab
+      const i = (y * w + x) * 4;
+      d[i] = 128 - 127 * gx * m;
+      d[i + 1] = 128 - 127 * gy * m;
+    };
+
+    for (let y = 0; y < hgt; y++) {
+      if (y < BEZEL || y >= hgt - BEZEL) {
+        for (let x = 0; x < w; x++) pixel(x, y);
+      } else {
+        for (let x = 0; x < Math.min(BEZEL, w); x++) pixel(x, y);
+        for (let x = Math.max(BEZEL, w - BEZEL); x < w; x++) pixel(x, y);
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    const url = canvas.toDataURL('image/png');
+    lensCache.set(key, url);
+    return url;
+  }
+
+  function attachLens(dock, index, defs) {
+    const id = `lg-lens-${index}`;
+    const filter = document.createElementNS(SVG_NS, 'filter');
+    filter.setAttribute('id', id);
+    filter.setAttribute('x', '0');
+    filter.setAttribute('y', '0');
+    filter.setAttribute('width', '100%');
+    filter.setAttribute('height', '100%');
+    filter.setAttribute('color-interpolation-filters', 'sRGB');
+    const mk = (name, attrs) => {
+      const node = document.createElementNS(SVG_NS, name);
+      for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+      return node;
+    };
+    const feImage = mk('feImage', { x: 0, y: 0, preserveAspectRatio: 'none', result: 'map' });
+    filter.append(
+      feImage,
+      mk('feDisplacementMap', { in: 'SourceGraphic', in2: 'map', scale: BEND, xChannelSelector: 'R', yChannelSelector: 'G' }),
+    );
+    defs.append(filter);
+
+    const update = () => {
+      const w = Math.round(dock.offsetWidth);
+      const hgt = Math.round(dock.offsetHeight);
+      if (!w || !hgt) return;
+      const r = parseFloat(getComputedStyle(dock).borderTopLeftRadius) || 0;
+      const radius = Math.min(r, w / 2, hgt / 2);
+      feImage.setAttribute('width', String(w));
+      feImage.setAttribute('height', String(hgt));
+      feImage.setAttribute('href', lensMap(w, hgt, radius));
+      dock.style.setProperty('backdrop-filter', `url(#${id}) blur(6px) saturate(var(--saturation)) brightness(0.94)`);
+    };
+
+    let timer = 0;
+    let first = true;
+    new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(update, first ? 0 : 150);
+      first = false;
+    }).observe(dock);
+  }
+
+
+  // Eckenradius wächst mit der Höhe des Docks (wie bei iOS), mindestens konzentrisch zu den Icons
+  function fitRadius(docks) {
+    if (!('ResizeObserver' in window)) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const { target } of entries) {
+        const hgt = target.offsetHeight;
+        if (!hgt) continue;
+        const size = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--icon-size')) || 60;
+        target.style.borderRadius = `${Math.round(Math.min(Math.max(hgt * 0.31, size * 0.56), 64))}px`;
+      }
+    });
+    docks.forEach((d) => ro.observe(d));
+  }
+
+  function liquidGlass(docks) {
+    if (!docks.length) return;
+    fitRadius(docks);
+    if (!canRefract || !('ResizeObserver' in window)) return;
+
+    document.querySelectorAll('svg[data-lg]').forEach((n) => n.remove());
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('data-lg', '');
+    svg.setAttribute('width', '0');
+    svg.setAttribute('height', '0');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.style.position = 'absolute';
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    svg.append(defs);
+    document.body.append(svg);
+    docks.forEach((dock, i) => attachLens(dock, i, defs));
+  }
+
+
+  /* ---------- Darstellung ---------- */
+
+  const $ = (id) => document.getElementById(id);
+  const board = $('board');
+  const empty = $('empty');
+  const emptyText = $('emptyText');
+  const status = $('status');
+  const btnMain = $('btnMain');
+  const btnFolder = $('btnFolder');
+  const btnEdit = $('btnEdit');
+  const btnUndo = $('btnUndo');
+  const btnDownload = $('btnDownload');
+  const input = $('fileInput');
+  const toast = $('toast');
+  const toastText = $('toastText');
+  const toastUndo = $('toastUndo');
+  const dialog = $('addDialog');
+  const addForm = $('addForm');
+  const addHeading = $('addHeading');
+  const addUrl = $('addUrl');
+  const addName = $('addName');
+  const addError = $('addError');
+  const addCancel = $('addCancel');
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const supportsFolder = typeof window.showDirectoryPicker === 'function';
+
+  // Eingeklappte Gruppen merken (klein, deshalb localStorage)
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); return true; } catch { return false; } },
+  };
+  let closed;
+  try { closed = new Set(JSON.parse(store.get('bm-closed') || '[]')); } catch { closed = new Set(); }
+  const saveClosed = () => store.set('bm-closed', JSON.stringify([...closed]));
+
+  /* ---------- Zustand ---------- */
+
+  let model = null;         // eingelesene Lesezeichen (Ordner und Links)
+  let editing = false;      // Bearbeiten-Modus
+  const history = [];       // Schnappschüsse für „Rückgängig“
+  const foldersById = new Map();
+
+  let dirHandle = null;     // verbundener Ordner (nur Chromium)
+  let locked = false;       // Ordner verbunden, aber noch nicht für diese Sitzung freigegeben
+  let currentText = null;   // aktuelle Lesezeichen-Datei als Text
+  let currentName = '';     // Dateiname, aus dem die Lesezeichen stammen
+  let note = '';            // Hinweis oder Fehler für die Statuszeile
+  let dirty = false;        // Änderungen sind noch nicht in die Datei im Ordner geschrieben
+  let edited = false;       // in dieser Sitzung wurde etwas geändert
+  let savedFlag = false;    // die letzte Änderung wurde in die Datei geschrieben
+
+  /* ---------- Bearbeiten: Änderungen am Modell ---------- */
+
+  const nowSec = () => String(Math.floor(Date.now() / 1000));
+  const allFolders = (root) => {
+    const out = [];
+    (function walk(f) { out.push(f); f.children.forEach((c) => { if (c.kind === 'folder') walk(c); }); })(root);
+    return out;
+  };
+  const parentOf = (node) => allFolders(model.root).find((f) => f.children.includes(node)) || null;
+  const touch = (folder) => { if (folder && 'last_modified' in folder.attrs) folder.attrs.last_modified = nowSec(); };
+
+  function pushHistory() {
+    history.push(allFolders(model.root).map((f) => [f, f.children.slice()]));
+    if (history.length > 50) history.shift();
+  }
+
+  // Fügt ein Lesezeichen an Position index unter den sichtbaren Links eines Ordners ein.
+  // Unterordner und unsichtbare Sonderlinks behalten ihren Platz.
+  function insertAt(folder, item, index) {
+    const slots = [];
+    folder.children.forEach((c, i) => { if (c.kind === 'item' && !c.hidden) slots.push(i); });
+    let pos;
+    if (!slots.length) pos = folder.children.length;
+    else if (index >= slots.length) pos = slots[slots.length - 1] + 1;
+    else pos = slots[Math.max(0, index)];
+    folder.children.splice(pos, 0, item);
+  }
+
+  function detach(item) {
+    const parent = parentOf(item);
+    if (parent) parent.children.splice(parent.children.indexOf(item), 1);
+    return parent;
+  }
+
+  function removeItem(item) {
+    if (!parentOf(item)) return;
+    pushHistory();
+    touch(detach(item));
+    commit();
+    showToast(`„${item.title}“ entfernt`);
+  }
+
+  function moveItem(item, toFolder, index) {
+    if (!toFolder || !parentOf(item)) return;
+    pushHistory();
+    touch(detach(item));
+    insertAt(toFolder, item, index);
+    touch(toFolder);
+    commit();
+  }
+
+  function addItem(folder, url, title) {
+    const item = makeItem({ href: url.href, add_date: nowSec() }, title || url.hostname.replace(/^www\./, ''));
+    pushHistory();
+    insertAt(folder, item, Infinity);
+    touch(folder);
+    commit();
+  }
+
+  function undo() {
+    const snapshot = history.pop();
+    if (!snapshot) return;
+    for (const [folder, kids] of snapshot) folder.children = kids;
+    hideToast();
+    commit();
+  }
+
+  // Nach jeder Änderung: Datei neu erzeugen, Ansicht aktualisieren, speichern
+  function commit() {
+    edited = true;
+    savedFlag = false;
+    currentText = serialize(model);
+    renderBoard();
+    updateUI();
+    scheduleSave();
+  }
+
+  /* ---------- Meldung mit „Rückgängig“ ---------- */
+
+  let toastTimer = 0;
+  function showToast(text) {
+    toastText.textContent = text;
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 7000);
+  }
+  function hideToast() { clearTimeout(toastTimer); toast.hidden = true; }
+
+  /* ---------- Darstellung aus dem Modell ---------- */
+
+  // Alle Gruppen, die angezeigt werden. Im Bearbeiten-Modus auch leere Ordner als Ziel zum Ablegen.
+  function collectPanels() {
+    const panels = [];
+    (function walk(f, parents) {
+      const items = f.children.filter((c) => c.kind === 'item' && !c.hidden);
+      const isRoot = f.name == null;
+      const childParents = isRoot ? [] : [...parents, f.name];
+      if (!isRoot && (items.length || editing)) panels.push({ folder: f, name: f.name, parents, items });
+      f.children.forEach((c) => { if (c.kind === 'folder') walk(c, childParents); });
+      if (isRoot && (items.length || editing)) panels.push({ folder: f, name: 'Ohne Ordner', parents: [], items });
+    })(model.root, []);
+    return panels;
+  }
+
+  function addTile(folder, label) {
+    const tile = h('button', { class: 'app add-tile', type: 'button', 'aria-label': `Lesezeichen zu „${label}“ hinzufügen` },
+      h('span', { class: 'icon add-icon', 'aria-hidden': 'true' }),
+      h('span', { class: 'name', text: 'Hinzufügen' }));
+    tile.addEventListener('click', () => openAddDialog(folder, label));
+    return tile;
+  }
+
+  function buildSection(p, i) {
+    const folder = p.folder;
+    foldersById.set(folder.id, folder);
+    const id = [...p.parents, p.name].join('/');
+    const dock = h('div', { class: 'dock', id: `dock-${i}`, role: 'group', 'aria-label': p.name },
+      p.items.map(appLink),
+      p.items.length ? null : h('div', { class: 'dock-empty', text: 'Leer' }),
+      addTile(folder, p.name));
+    dock.dataset.fid = folder.id;
+    const head = h('button', { class: 'sec-head', type: 'button', 'aria-controls': dock.id },
+      h('span', { class: 'chev', 'aria-hidden': 'true' }),
+      h('span', { class: 'sec-name', text: p.name }),
+      p.parents.length ? h('span', { class: 'crumb', text: `in ${p.parents.join(' / ')}` }) : null,
+      h('span', { class: 'sec-count', text: String(p.items.length) }));
+    const el = h('section', { class: 'sec' }, h('h2', { class: 'sec-title' }, head), dock);
+    el.dataset.fid = folder.id;
+
+    const setOpen = (open, animate) => {
+      el.classList.toggle('is-closed', !open);
+      head.setAttribute('aria-expanded', String(open));
+      dock.getAnimations().forEach((a) => a.cancel());
+      const hidden = { opacity: 0, transform: 'translateY(-10px) scale(0.96)' };
+      const shown = { opacity: 1, transform: 'none' };
+      if (open) {
+        dock.hidden = false;
+        if (animate && !reduceMotion) {
+          dock.animate([hidden, shown], { duration: 340, easing: 'cubic-bezier(0.3, 1.4, 0.5, 1)' });
+        }
+      } else if (animate && !reduceMotion) {
+        const a = dock.animate([shown, hidden], { duration: 180, easing: 'ease-in', fill: 'forwards' });
+        a.onfinish = () => { if (el.classList.contains('is-closed')) dock.hidden = true; a.cancel(); };
+      } else {
+        dock.hidden = true;
+      }
+    };
+
+    el._toggle = (open, animate) => {
+      if (open) closed.delete(id); else closed.add(id);
+      saveClosed();
+      setOpen(open, animate);
+    };
+    head.addEventListener('click', () => el._toggle(el.classList.contains('is-closed'), true));
+
+    setOpen(!closed.has(id), false);
+    return el;
+  }
+
+  function renderBoard() {
+    if (!model) return;
+    const y = window.scrollY;
+    foldersById.clear();
+    const panels = collectPanels();
+    board.replaceChildren(...(panels.length
+      ? panels.map(buildSection)
+      : [h('p', { class: 'board-empty', text: 'Alle Lesezeichen sind entfernt. Mit „Bearbeiten“ kannst du neue hinzufügen.' })]));
+
+    try { liquidGlass([...board.querySelectorAll('.dock')]); }
+    catch (err) { console.warn('Liquid-Glass-Effekte nicht verfügbar:', err); }
+    window.scrollTo(0, y);
+  }
+
+  function setEditing(on) {
+    editing = on;
+    document.body.classList.toggle('editing', on);
+    if (!on && dialog.open) dialog.close();
+    hideToast();
+    renderBoard();
+    updateUI();
+  }
+
+  function updateUI() {
+    const hasData = !!model && currentText != null;
+    empty.hidden = hasData;
+    emptyText.textContent = supportsFolder
+      ? 'Lege deine exportierte Lesezeichen-Datei in einen Ordner, zum Beispiel „bookmarks“, und verbinde ihn oben. Der Bookmark Designer findet die Datei dort bei jedem Start wieder, auch neuere Exporte.'
+      : 'Importiere deine exportierte Lesezeichen-Datei oben. Sie wird in diesem Browser gespeichert und beim nächsten Öffnen wieder angezeigt.';
+
+    let text = note;
+    if (!text) {
+      if (dirHandle && locked) {
+        text = `Ordner „${dirHandle.name}“ ist noch nicht freigegeben.${dirty
+          ? ' Deine Änderungen sind im Browser gespeichert und kommen nach der Freigabe in die Datei.'
+          : hasData ? ' Gezeigt werden die zuletzt gespeicherten Lesezeichen.' : ''}`;
+      } else if (dirHandle) {
+        text = (currentName ? `Ordner „${dirHandle.name}“ · ${currentName}` : `Ordner „${dirHandle.name}“`) + (savedFlag ? ' · gespeichert' : '');
+      } else if (hasData) {
+        text = (currentName ? `Im Browser gespeichert · ${currentName}` : 'Im Browser gespeichert')
+          + (edited ? ' · mit „Herunterladen“ erhältst du die geänderte Datei' : '');
+      }
+    }
+    status.textContent = text;
+
+    btnMain.hidden = !supportsFolder;
+    btnMain.textContent = !dirHandle ? 'Ordner verbinden' : locked ? 'Ordner freigeben' : 'Aktualisieren';
+    btnFolder.hidden = !supportsFolder || !dirHandle;
+    btnDownload.hidden = !hasData;
+    btnEdit.hidden = !hasData;
+    btnEdit.textContent = editing ? 'Fertig' : 'Bearbeiten';
+    btnUndo.hidden = !editing;
+    btnUndo.disabled = !history.length;
+  }
+
+  // Zeigt eine Datei an, wenn sie sich vom aktuellen Stand unterscheidet
+  function apply(text, name) {
+    if (text !== currentText) {
+      const parsed = parseModel(text);
+      if (!parsed) return false;
+      model = parsed;
+      history.length = 0;
+      currentText = text;
+      renderBoard();
+    }
+    currentName = name || '';
+    return true;
+  }
+
+  /* ---------- Neues Lesezeichen ---------- */
+
+  let addTarget = null;
+
+  function openAddDialog(folder, label) {
+    addTarget = folder;
+    addHeading.textContent = `Zu „${label}“ hinzufügen`;
+    addUrl.value = '';
+    addName.value = '';
+    addError.hidden = true;
+    dialog.showModal();
+    addUrl.focus();
+  }
+
+  addCancel.addEventListener('click', () => dialog.close());
+  addForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    let value = addUrl.value.trim();
+    value = normalizeInput(value);
+    const url = value ? safeUrl(value) : null;
+    const complete = url && (url.protocol === 'file:' || url.hostname.includes('.') || isLocal(url.hostname));
+    if (!complete) {
+      addError.textContent = 'Bitte gib eine vollständige Adresse ein, zum Beispiel beispiel.de.';
+      addError.hidden = false;
+      addUrl.focus();
+      return;
+    }
+    dialog.close();
+    addItem(addTarget, url, addName.value.trim());
+  });
+
+  /* ---------- Verschieben per Drag & Drop ---------- */
+
+  let drag = null;        // { item, target }
+  let bar = null;         // Einfügemarke im Ziel-Dock
+  let expandTimer = 0;
+
+  const dockApps = (dock) => [...dock.querySelectorAll(':scope > .app:not(.add-tile):not(.is-dragging)')];
+
+  // Position unter dem Zeiger: vor welchem Symbol würde das Lesezeichen landen?
+  function dropIndex(dock, x, y) {
+    const apps = dockApps(dock);
+    let idx = apps.length;
+    for (let i = 0; i < apps.length; i++) {
+      const r = apps[i].getBoundingClientRect();
+      if (y < r.top || (y <= r.bottom + 8 && x < r.left + r.width / 2)) { idx = i; break; }
+    }
+    return { idx, apps };
+  }
+
+  function showBar(dock, idx, apps) {
+    if (!bar) bar = h('div', { class: 'drop-bar', 'aria-hidden': 'true' });
+    const d = dock.getBoundingClientRect();
+    let left = 14;
+    let top = 22;
+    let height = 78;
+    if (apps.length) {
+      const ref = apps[Math.min(idx, apps.length - 1)].getBoundingClientRect();
+      left = (idx < apps.length ? ref.left - d.left - 6 : ref.right - d.left + 4);
+      top = ref.top - d.top;
+      height = ref.height;
+    }
+    bar.style.left = `${left}px`;
+    bar.style.top = `${top}px`;
+    bar.style.height = `${height}px`;
+    if (bar.parentNode !== dock) dock.append(bar);
+  }
+
+  function endDrag() {
+    clearTimeout(expandTimer);
+    expandTimer = 0;
+    if (bar) bar.remove();
+    board.querySelectorAll('.is-dragging').forEach((n) => n.classList.remove('is-dragging'));
+    document.body.classList.remove('is-dragging-item');
+    drag = null;
+  }
+
+  board.addEventListener('dragstart', (e) => {
+    const a = editing && e.target.closest ? e.target.closest('a.app') : null;
+    if (!a || !a._item) return;
+    drag = { item: a._item, target: null };
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', a._item.url.href);
+    requestAnimationFrame(() => a.classList.add('is-dragging'));
+    document.body.classList.add('is-dragging-item');
+  });
+
+  board.addEventListener('dragover', (e) => {
+    if (!drag) return;
+    const dock = e.target.closest('.dock');
+    const head = e.target.closest('.sec-head');
+    if (dock && !dock.hidden) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const { idx, apps } = dropIndex(dock, e.clientX, e.clientY);
+      drag.target = { folder: foldersById.get(dock.dataset.fid), idx };
+      showBar(dock, idx, apps);
+    } else if (head) {
+      // Über einer Gruppen-Kapsel: ans Ende der Gruppe ablegen, eingeklappte Gruppen öffnen sich nach kurzer Zeit
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const sec = head.closest('.sec');
+      drag.target = { folder: foldersById.get(sec.dataset.fid), idx: Infinity };
+      if (bar) bar.remove();
+      if (sec.classList.contains('is-closed') && !expandTimer) {
+        expandTimer = setTimeout(() => { expandTimer = 0; sec._toggle(true, true); }, 600);
+      }
+    } else {
+      drag.target = null;
+      if (bar) bar.remove();
+    }
+  });
+
+  board.addEventListener('drop', (e) => {
+    if (!drag) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const { item, target } = drag;
+    endDrag();
+    if (target) moveItem(item, target.folder, target.idx);
+  });
+
+  document.addEventListener('dragend', () => { if (drag) endDrag(); });
+
+  // Im Bearbeiten-Modus öffnen Klicks auf ein Symbol keine Seite
+  board.addEventListener('click', (e) => {
+    if (editing && e.target.closest('a.app')) e.preventDefault();
+  }, true);
+
+  board.addEventListener('keydown', (e) => {
+    const a = editing && e.target.closest ? e.target.closest('a.app') : null;
+    if (a && a._item && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); removeItem(a._item); }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!editing || document.querySelector('dialog[open]')) return;
+    const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement && document.activeElement.tagName);
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); undo(); }
+    else if (e.key === 'Escape') setEditing(false);
+  });
+
+  /* ---------- Speicher im Browser (IndexedDB) ---------- */
+  // Hier liegen der Ordner-Zugriff und eine Kopie der zuletzt gezeigten Lesezeichen.
+  // IndexedDB fasst viel mehr als localStorage, auch große Exporte mit vielen Icons passen hinein.
+
+  const idb = (() => {
+    let opened;
+    const open = () => {
+      opened = opened || new Promise((resolve, reject) => {
+        const req = indexedDB.open('bookmark-designer', 1);
+        req.onupgradeneeded = () => req.result.createObjectStore('kv');
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      return opened;
+    };
+    const run = async (mode, fn) => {
+      const db = await open();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('kv', mode);
+        const req = fn(tx.objectStore('kv'));
+        tx.oncomplete = () => resolve(req.result);
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      });
+    };
+    return {
+      get: (k) => run('readonly', (s) => s.get(k)).catch(() => undefined),
+      set: (k, v) => run('readwrite', (s) => s.put(v, k)).then(() => true, () => false),
+    };
+  })();
+
+  /* ---------- Ordner ---------- */
+
+  async function hasPermission(handle, request) {
+    const opts = { mode: 'readwrite' };
+    if ((await handle.queryPermission(opts)) === 'granted') return true;
+    return !!request && (await handle.requestPermission(opts)) === 'granted';
+  }
+
+  // Sucht im Ordner die neueste HTML-Datei, die wirklich Lesezeichen enthält (Sicherungskopien zählen nicht)
+  async function readFromFolder(dir) {
+    const files = [];
+    for await (const [name, entry] of dir.entries()) {
+      if (entry.kind === 'file' && /\.html?$/i.test(name) && !/\.backup\.html?$/i.test(name)) {
+        files.push({ name, file: await entry.getFile() });
+      }
+    }
+    files.sort((a, b) => b.file.lastModified - a.file.lastModified);
+    for (const { name, file } of files) {
+      const head = await file.slice(0, 2048).text();
+      if (/NETSCAPE-Bookmark-file/i.test(head) || /<DT>\s*<A /i.test(head)) {
+        return { name, text: await file.text() };
+      }
+    }
+    return null;
+  }
+
+  async function writeFile(fileHandle, text) {
+    const w = await fileHandle.createWritable();
+    await w.write(text);
+    await w.close();
+  }
+
+  // Schreibt die aktuelle Datei in den Ordner. Vor dem ersten Überschreiben entsteht einmalig eine Sicherung
+  // der ursprünglichen Datei („name.backup.html“).
+  async function writeToFolder(text) {
+    const target = /\.html?$/i.test(currentName || '') ? currentName : 'bookmarks.html';
+    const backup = `${target.replace(/\.html?$/i, '')}.backup.html`;
+
+    let existing = null;
+    try { existing = await dirHandle.getFileHandle(target); }
+    catch (err) { if (err.name !== 'NotFoundError') throw err; }
+
+    if (existing) {
+      let hasBackup = true;
+      try { await dirHandle.getFileHandle(backup); }
+      catch (err) { if (err.name === 'NotFoundError') hasBackup = false; else throw err; }
+      if (!hasBackup) {
+        const original = await (await existing.getFile()).text();
+        await writeFile(await dirHandle.getFileHandle(backup, { create: true }), original);
+      }
+    }
+    await writeFile(existing || await dirHandle.getFileHandle(target, { create: true }), text);
+    currentName = target;
+  }
+
+  async function syncFolder(request) {
+    if (!dirHandle) return;
+    try {
+      locked = !(await hasPermission(dirHandle, request));
+      if (locked) { note = ''; return; }
+
+      // Es gibt ungespeicherte Änderungen aus dem Bearbeiten: Die haben Vorrang vor der Datei im Ordner
+      if (dirty && currentText != null) {
+        await writeToFolder(currentText);
+        dirty = false;
+        savedFlag = true;
+        note = '';
+        await idb.set('source', { text: currentText, name: currentName, dirty: false });
+        return;
+      }
+
+      const found = await readFromFolder(dirHandle);
+      if (!found) { note = `Im Ordner „${dirHandle.name}“ wurde keine Lesezeichen-Datei gefunden.`; return; }
+      if (!apply(found.text, found.name)) { note = `„${found.name}“ enthält keine Lesezeichen.`; return; }
+      note = '';
+      await idb.set('source', { text: found.text, name: found.name, dirty: false });
+    } catch (err) {
+      note = err && err.name === 'NotFoundError'
+        ? `Der Ordner „${dirHandle.name}“ wurde nicht gefunden. Bitte verbinde ihn neu.`
+        : `Der Ordner konnte nicht gelesen werden (${(err && err.name) || 'Fehler'}).`;
+    } finally {
+      updateUI();
+    }
+  }
+
+  async function connectFolder() {
+    try {
+      const dir = await window.showDirectoryPicker({ id: 'bookmarks', mode: 'readwrite' });
+      dirHandle = dir;
+      locked = false;
+      dirty = false; // der neue Ordner liefert die Lesezeichen, nicht der Zwischenspeicher
+      note = '';
+      await idb.set('dir', dir);
+      await syncFolder(false);
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      note = `Der Ordner konnte nicht verbunden werden (${(err && err.name) || 'Fehler'}). Wähle einen eigenen Unterordner, zum Beispiel „bookmarks“, nicht Downloads oder Dokumente selbst.`;
+      updateUI();
+    }
+  }
+
+  /* ---------- Speichern nach Änderungen ---------- */
+
+  let saveTimer = 0;
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 400);
+  }
+
+  async function saveNow() {
+    const text = currentText;
+    if (text == null) return;
+    dirty = !!dirHandle;
+    await idb.set('source', { text, name: currentName, dirty });
+
+    if (dirHandle) {
+      try {
+        if ((await dirHandle.queryPermission({ mode: 'readwrite' })) === 'granted') {
+          await writeToFolder(text);
+          dirty = false;
+          locked = false;
+          savedFlag = true;
+          note = '';
+          await idb.set('source', { text, name: currentName, dirty: false });
+        } else {
+          locked = true;
+        }
+      } catch (err) {
+        note = `Die Datei im Ordner konnte nicht aktualisiert werden (${(err && err.name) || 'Fehler'}). Deine Änderungen sind im Browser gespeichert.`;
+      }
+    }
+    updateUI();
+  }
+
+  // Die geänderte Datei als Download, zum Import in jeden Browser
+  function downloadFile() {
+    const name = /\.html?$/i.test(currentName || '') ? currentName : 'bookmarks.html';
+    const url = URL.createObjectURL(new Blob([currentText], { type: 'text/html;charset=utf-8' }));
+    const a = h('a', { href: url, download: name });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  /* ---------- Import ---------- */
+
+  async function importFile(file) {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      if (!apply(text, file.name)) {
+        note = 'In dieser Datei wurden keine Lesezeichen gefunden. Exportiere sie im Browser als HTML-Datei.';
+        updateUI();
+        return;
+      }
+      note = '';
+      edited = false;
+      savedFlag = false;
+      dirty = false;
+      await idb.set('source', { text, name: file.name, dirty: false });
+
+      // Ist ein Ordner verbunden, wird die Datei dort als bookmarks.html abgelegt
+      if (dirHandle) {
+        try {
+          if ((await dirHandle.queryPermission({ mode: 'readwrite' })) === 'granted') {
+            currentName = 'bookmarks.html';
+            await writeToFolder(text);
+            locked = false;
+            savedFlag = true;
+          } else {
+            locked = true;
+            note = 'Importiert und im Browser gespeichert. Gib den Ordner frei, dann wird die Datei auch dort abgelegt.';
+          }
+        } catch (err) {
+          note = `Importiert, aber nicht im Ordner gespeichert (${(err && err.name) || 'Fehler'}).`;
+        }
+      }
+    } catch (err) {
+      console.error('Import fehlgeschlagen:', err);
+      note = `Die Datei konnte nicht verarbeitet werden (${(err && err.message) || 'unbekannter Fehler'}).`;
+    }
+    updateUI();
+  }
+
+  /* ---------- Hintergrund (Bild, Video, Apple-TV-Videos) ---------- */
+  // Der Hintergrund liegt in #bgLayer hinter allem. Die Auswahl bleibt im Browser gespeichert (IndexedDB).
+  // Apple-TV-Videos: Apple veröffentlicht den Katalog der Bildschirmschoner-Videos als Archiv (entries.json).
+  // Daraus entsteht hier eine Auswahl. Die Videos selbst werden direkt von Apple gestreamt.
+
+  // tvOS 26 (Stand der Community-Liste zu Apples Bildschirmschoner-Feeds). Mit neuen tvOS-Versionen kann sich die Adresse ändern.
+  const APPLE_CATALOG_URLS = [
+    'https://sylvan.apple.com/itunes-assets/Aerials126/v4/c0/45/d9/c045d9d0-9606-1535-62fe-189edb4f79eb/resources-atv-23J-2.tar',
+    'https://sylvan.apple.com/Aerials/resources-atv-23J-2.tar',
+  ];
+  const QUALITY = {
+    hd: ['url-1080-H264', 'url-1080-SDR', 'url-4K-SDR', 'url-4K-SDR-240FPS'],
+    uhd: ['url-4K-SDR', 'url-4K-SDR-240FPS', 'url-1080-SDR', 'url-1080-H264'],
+  };
+
+  const bgLayer = $('bgLayer');
+  const bgDialog = $('bgDialog');
+  const bgMsg = $('bgMsg');
+  const bgGrid = $('bgGrid');
+  const bgFilter = $('bgFilter');
+  const bgCatalogInfo = $('bgCatalogInfo');
+  const bgQuality = $('bgQuality');
+  const bgLens = $('bgLens');
+
+  let bgState = { type: 'gradient' };
+  let bgObjectUrl = null;   // Adresse einer lokal gespeicherten Datei
+  let bgToken = 0;          // verwirft veraltete Ladevorgänge
+  let catalog = [];
+
+  const isVideoUrl = (url) => /\.(mp4|m4v|mov|webm|ogv)([?#]|$)/i.test(url);
+  const pickUrl = (urls, quality) => {
+    for (const key of QUALITY[quality] || QUALITY.hd) if (urls[key]) return urls[key];
+    return Object.values(urls)[0];
+  };
+
+  function setBgMessage(text) {
+    bgMsg.textContent = text || '';
+    bgMsg.hidden = !text;
+  }
+
+  function releaseObjectUrl() {
+    if (bgObjectUrl) { URL.revokeObjectURL(bgObjectUrl); bgObjectUrl = null; }
+  }
+
+  // Lädt ein Bild oder Video unsichtbar und zeigt es erst, wenn es wirklich da ist
+  function loadMedia(src, video, poster) {
+    return new Promise((resolve, reject) => {
+      let el;
+      if (video) {
+        el = document.createElement('video');
+        el.muted = true;
+        el.defaultMuted = true;
+        el.loop = true;
+        el.playsInline = true;
+        el.preload = 'auto';
+        el.disablePictureInPicture = true;
+        el.setAttribute('muted', '');
+        el.setAttribute('aria-hidden', 'true');
+        if (poster) el.poster = poster;
+        el.addEventListener('loadeddata', () => resolve(el), { once: true });
+        el.addEventListener('error', () => reject(new Error('Video nicht ladbar')), { once: true });
+        el.src = src;
+      } else {
+        el = new Image();
+        el.alt = '';
+        el.decoding = 'async';
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error('Bild nicht ladbar'));
+        el.src = src;
+      }
+      el.className = 'bg-media';
+    });
+  }
+
+  // Mittlere Helligkeit des Hintergrunds (0 bis 1). Bei fremden Adressen verbietet der Browser das Auslesen, dann bleibt es bei null.
+  function measureBackground(el) {
+    try {
+      const c = document.createElement('canvas');
+      c.width = 12;
+      c.height = 12;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(el, 0, 0, 12, 12);
+      const d = ctx.getImageData(0, 0, 12, 12).data;
+      let sum = 0;
+      for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+      return sum / (d.length / 4) / 255;
+    } catch { return null; }
+  }
+
+  function showGradient() {
+    bgToken++;
+    bgLayer.replaceChildren();
+    releaseObjectUrl();
+    document.body.classList.remove('has-bg', 'bg-bright');
+  }
+
+  // Wendet einen Hintergrund an. Schlägt das Laden fehl, bleibt der bisherige stehen.
+  async function applyBackground(state, persist = true) {
+    if (state.type === 'gradient') {
+      showGradient();
+      setBgMessage('');
+      bgState = state;
+      if (persist) idb.set('bg', state);
+      renderCatalog();
+      return true;
+    }
+
+    const token = ++bgToken;
+    let src;
+    let video;
+    let poster = '';
+    let nextObjectUrl = null;
+
+    if (state.type === 'file') {
+      nextObjectUrl = URL.createObjectURL(state.blob);
+      src = nextObjectUrl;
+      video = (state.blob.type || '').startsWith('video/') || isVideoUrl(state.name || '');
+    } else if (state.type === 'apple') {
+      src = pickUrl(state.urls, state.quality);
+      video = true;
+      poster = /^https?:/i.test(state.preview || '') ? state.preview : '';
+    } else {
+      src = state.url;
+      video = isVideoUrl(src);
+    }
+    if (!src || (state.type !== 'file' && !safeUrl(src))) {
+      setBgMessage('Diese Adresse ist nicht gültig.');
+      return false;
+    }
+
+    try {
+      const el = await loadMedia(src, video, poster);
+      if (token !== bgToken) { if (nextObjectUrl) URL.revokeObjectURL(nextObjectUrl); return false; }
+      releaseObjectUrl();
+      bgObjectUrl = nextObjectUrl;
+      el.style.opacity = '0';
+      bgLayer.replaceChildren(el);
+      document.body.classList.add('has-bg');
+      const lum = measureBackground(el);
+      document.body.classList.toggle('bg-bright', lum !== null && lum > 0.6);
+      requestAnimationFrame(() => { el.style.opacity = '1'; });
+      if (video) {
+        if (reduceMotion) el.pause();
+        else el.play().catch(() => { /* Autoplay gesperrt: bleibt auf dem ersten Bild */ });
+      }
+      bgState = state;
+      setBgMessage('');
+      if (persist) idb.set('bg', state);
+      renderCatalog();
+      return true;
+    } catch (err) {
+      if (nextObjectUrl) URL.revokeObjectURL(nextObjectUrl);
+      if (token === bgToken) {
+        setBgMessage(state.type === 'apple'
+          ? 'Dieses Video lässt sich nicht laden. Apple hat es vielleicht entfernt, oder dein Browser kann das Format nicht abspielen. Probiere eine andere Qualität oder ein anderes Video.'
+          : 'Die Datei oder Adresse lässt sich nicht laden. Bei Videos funktionieren am besten MP4 (H.264) und WebM.');
+      }
+      return false;
+    }
+  }
+
+  /* ----- Apple-Katalog ----- */
+
+  // Liest die Dateien eines (unkomprimierten) TAR-Archivs
+  function readTar(bytes) {
+    const dec = new TextDecoder();
+    const field = (off, len) => dec.decode(bytes.subarray(off, off + len)).replace(/\0[\s\S]*$/, '');
+    const files = [];
+    let off = 0;
+    while (off + 512 <= bytes.length) {
+      const name = field(off, 100);
+      if (!name) break;
+      const size = parseInt(field(off + 124, 12).trim(), 8) || 0;
+      const type = String.fromCharCode(bytes[off + 156] || 48);
+      const prefix = field(off + 345, 155);
+      if (type === '0') files.push({ name: prefix ? `${prefix}/${name}` : name, data: bytes.subarray(off + 512, off + 512 + size) });
+      off += 512 + Math.ceil(size / 512) * 512;
+    }
+    return files;
+  }
+
+  // Wandelt Apples entries.json (alle Versionen seit tvOS 10) in eine einheitliche Liste um
+  function parseCatalog(json) {
+    const assets = Array.isArray(json) ? json.flatMap((g) => g.assets || []) : (json.assets || []);
+    return assets.map((a) => {
+      const urls = {};
+      for (const [k, v] of Object.entries(a)) {
+        if (/^url/.test(k) && typeof v === 'string' && /^https?:\/\//i.test(v)) urls[k] = v;
+      }
+      if (urls.url && !urls['url-1080-H264']) { urls['url-1080-H264'] = urls.url; delete urls.url; }
+      return {
+        id: String(a.id || a.shotID || a.accessibilityLabel || Math.random()),
+        label: String(a.accessibilityLabel || a.shotID || a.id || 'Video'),
+        preview: typeof a.previewImage === 'string' && /^https?:\/\//i.test(a.previewImage) ? a.previewImage : '',
+        urls,
+      };
+    }).filter((e) => Object.keys(e.urls).length);
+  }
+
+  async function catalogFromBytes(input, filename) {
+    let bytes = new Uint8Array(input);
+    if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+      bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+    let text;
+    if (/\.json$/i.test(filename || '') || bytes[0] === 0x7b || bytes[0] === 0x5b) {
+      text = new TextDecoder().decode(bytes);
+    } else {
+      const file = readTar(bytes).find((f) => /(^|\/)entries\.json$/.test(f.name));
+      if (!file) throw new Error('Im Archiv liegt keine entries.json.');
+      text = new TextDecoder().decode(file.data);
+    }
+    const list = parseCatalog(JSON.parse(text));
+    if (!list.length) throw new Error('Der Katalog enthält keine Videos.');
+    return list;
+  }
+
+  async function setCatalog(list) {
+    catalog = list;
+    await idb.set('bg-catalog', list);
+    bgFilter.value = '';
+    renderCatalog();
+  }
+
+  function renderCatalog() {
+    const q = bgFilter.value.trim().toLowerCase();
+    const shown = catalog.filter((e) => !q || e.label.toLowerCase().includes(q));
+    bgFilter.hidden = !catalog.length;
+    bgCatalogInfo.textContent = catalog.length
+      ? `${catalog.length} Videos im Katalog${q ? ` · ${shown.length} Treffer` : ''}`
+      : 'Noch kein Katalog geladen.';
+    bgGrid.replaceChildren(...shown.slice(0, 300).map((e) => {
+      const active = bgState.type === 'apple' && bgState.id === e.id;
+      const item = h('button', { class: `bg-item${active ? ' is-active' : ''}`, type: 'button', title: e.label, 'aria-pressed': String(active) },
+        e.preview
+          ? h('img', { src: e.preview, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' })
+          : h('span', { class: 'bg-ph', 'aria-hidden': 'true' }),
+        h('span', { class: 'bg-label', text: e.label }));
+      item.addEventListener('click', () => {
+        setBgMessage('');
+        applyBackground({ type: 'apple', id: e.id, label: e.label, preview: e.preview, urls: e.urls, quality: bgQuality.value });
+      });
+      return item;
+    }));
+  }
+
+  async function loadCatalogFromApple() {
+    setBgMessage('');
+    bgCatalogInfo.textContent = 'Katalog wird von Apple geladen …';
+    try {
+      let buffer = null;
+      for (const url of APPLE_CATALOG_URLS) {
+        try {
+          const res = await fetch(url);
+          if (res.ok) { buffer = await res.arrayBuffer(); break; }
+        } catch { /* nächste Adresse versuchen */ }
+      }
+      if (!buffer) throw new Error('nicht erreichbar');
+      await setCatalog(await catalogFromBytes(buffer, 'resources.tar'));
+    } catch (err) {
+      renderCatalog();
+      setBgMessage('Der Katalog lässt sich nicht direkt von Apple laden, weil der Browser dort meist nicht zugreifen darf. '
+        + 'Lade die Datei stattdessen selbst herunter (Link unten) und wähle sie mit „Katalogdatei wählen“ aus.');
+    }
+  }
+
+  async function loadCatalogFromFile(file) {
+    if (!file) return;
+    setBgMessage('');
+    try {
+      await setCatalog(await catalogFromBytes(await file.arrayBuffer(), file.name));
+    } catch (err) {
+      setBgMessage(`Die Katalogdatei konnte nicht gelesen werden (${err.message}). Gewählt werden kann das TAR-Archiv von Apple oder dessen entries.json.`);
+    }
+  }
+
+  /* ----- Dialog ----- */
+
+  function showTab(name) {
+    bgDialog.querySelectorAll('.seg-btn').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+    bgDialog.querySelectorAll('.bg-panel').forEach((p) => { p.hidden = p.dataset.panel !== name; });
+  }
+
+  function openBgDialog() {
+    setBgMessage('');
+    bgQuality.value = bgState.quality || bgQuality.value || 'hd';
+    showTab({ apple: 'apple', file: 'file', url: 'url' }[bgState.type] || 'apple');
+    renderCatalog();
+    bgDialog.showModal();
+  }
+
+  bgDialog.querySelectorAll('.seg-btn').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  $('btnBg').addEventListener('click', openBgDialog);
+  $('bgClose').addEventListener('click', () => bgDialog.close());
+  $('bgGradient').addEventListener('click', () => applyBackground({ type: 'gradient' }));
+  $('bgLoadApple').addEventListener('click', loadCatalogFromApple);
+  $('bgCatalogFile').addEventListener('change', (e) => { loadCatalogFromFile(e.target.files[0]); e.target.value = ''; });
+  bgFilter.addEventListener('input', renderCatalog);
+
+  bgQuality.addEventListener('change', () => {
+    if (bgState.type === 'apple') applyBackground({ ...bgState, quality: bgQuality.value });
+  });
+
+  $('bgFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!/^(image|video)\//.test(file.type) && !isVideoUrl(file.name)) {
+      setBgMessage('Bitte wähle ein Bild oder ein Video.');
+      return;
+    }
+    setBgMessage('');
+    await applyBackground({ type: 'file', blob: file, name: file.name });
+  });
+
+  $('bgUrlForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    let value = $('bgUrl').value.trim();
+    value = normalizeInput(value);
+    if (!value || !safeUrl(value)) { setBgMessage('Bitte gib eine vollständige Adresse ein.'); return; }
+    setBgMessage('');
+    applyBackground({ type: 'url', url: value });
+  });
+
+  // Lichtbrechung am Glas: bei Videos kann sie den Rechner stark belasten
+  const setLens = (on) => {
+    document.documentElement.classList.toggle('no-lens', !on);
+    bgLens.checked = on;
+    store.set('bm-lens', on ? '1' : '0');
+  };
+  bgLens.addEventListener('change', () => setLens(bgLens.checked));
+  setLens(store.get('bm-lens') !== '0');
+
+  async function restoreBackground() {
+    const savedCatalog = await idb.get('bg-catalog');
+    if (Array.isArray(savedCatalog)) { catalog = savedCatalog; renderCatalog(); }
+    const saved = await idb.get('bg');
+    if (saved && saved.type && saved.type !== 'gradient') {
+      bgQuality.value = saved.quality || 'hd';
+      const ok = await applyBackground(saved, false);
+      if (!ok) { bgState = { type: 'gradient' }; setBgMessage(''); }
+    }
+  }
+
+  /* ---------- Bedienung ---------- */
+
+  btnMain.addEventListener('click', () => (dirHandle ? syncFolder(true) : connectFolder()));
+  btnFolder.addEventListener('click', connectFolder);
+  btnEdit.addEventListener('click', () => setEditing(!editing));
+  btnUndo.addEventListener('click', undo);
+  btnDownload.addEventListener('click', downloadFile);
+  toastUndo.addEventListener('click', undo);
+  input.addEventListener('change', () => { importFile(input.files[0]); input.value = ''; });
+
+  // Dateien auf die Seite ziehen (Import). Verschieben von Lesezeichen läuft getrennt davon.
+  const isFileDrag = (e) => !!(e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files'));
+  window.addEventListener('dragover', (e) => {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    document.body.classList.add('is-drop');
+  });
+  window.addEventListener('dragleave', (e) => { if (!e.relatedTarget) document.body.classList.remove('is-drop'); });
+  window.addEventListener('drop', (e) => {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    document.body.classList.remove('is-drop');
+    importFile(e.dataTransfer.files[0]);
+  });
+
+  /* ---------- Start ---------- */
+
+  (async () => {
+    // Browser bitten, die gespeicherten Daten nicht von selbst zu löschen
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch { /* ignorieren */ }
+
+    restoreBackground(); // Hintergrund im Hintergrund wiederherstellen, ohne die Lesezeichen aufzuhalten
+
+    // 1. Zuletzt gespeicherte Lesezeichen sofort zeigen
+    let cached = await idb.get('source');
+    if (!cached) {
+      const legacy = store.get('bm-source'); // Stand der früheren Version
+      if (legacy) cached = { text: legacy, name: '' };
+    }
+    if (cached && cached.text) apply(cached.text, cached.name);
+
+    // 2. Ordner wiederfinden. Waren Änderungen noch nicht in der Datei, kommen sie jetzt dorthin (sobald freigegeben).
+    dirHandle = supportsFolder ? ((await idb.get('dir')) || null) : null;
+    dirty = !!(dirHandle && cached && cached.dirty);
+    if (dirHandle) await syncFolder(false);
+    else updateUI();
+  })();
+})();
+
+(() => {
+  const menu = document.getElementById('menu'), mb = document.getElementById('btnMenu');
+  if (!menu || !mb) return;
+  const set = (o) => { menu.classList.toggle('open', o); mb.setAttribute('aria-expanded', String(o)); };
+  mb.addEventListener('click', (e) => { e.stopPropagation(); set(!menu.classList.contains('open')); });
+  menu.querySelector('.actions').addEventListener('click', (e) => { if (e.target.closest('.btn')) setTimeout(() => set(false), 0); });
+  document.addEventListener('click', (e) => { if (!menu.contains(e.target)) set(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') set(false); });
+})();
+</script>
+</body>
+</html>
