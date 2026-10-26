@@ -1780,7 +1780,7 @@ body.has-bg.bg-bright {
           { ...shown, transform: 'scaleY(0.9)', offset: 0.3 },
           { opacity: 0.72, transform: 'scaleY(0.42)', offset: 0.75 },
           collapsed,
-        ], { duration: 420, easing: 'cubic-bezier(0.4, 0, 0.8, 0.4)', fill: 'forwards' });
+        ], { duration: 260, easing: 'cubic-bezier(0.4, 0, 0.8, 0.4)', fill: 'forwards' });
         a.onfinish = () => { if (el.classList.contains('is-closed')) dock.hidden = true; a.cancel(); };
       } else {
         dock.hidden = true;
