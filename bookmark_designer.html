@@ -1502,11 +1502,14 @@ body.has-bg.bg-bright {
       timer = setTimeout(update, first ? 0 : 150);
       first = false;
     });
+    const openObserver = new MutationObserver(update);
     lensObservers.set(dock, () => {
       observer.disconnect();
+      openObserver.disconnect();
       clearTimeout(timer);
     });
     observer.observe(dock);
+    openObserver.observe(dock, { attributes: true, attributeFilter: ['open'] });
   }
 
 
