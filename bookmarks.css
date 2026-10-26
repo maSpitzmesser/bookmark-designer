@@ -111,7 +111,7 @@ body::before {
 .wrap {
   max-width: 1240px;
   margin: 0 auto;
-  padding: calc(40px + env(safe-area-inset-top, 0px)) 20px calc(56px + env(safe-area-inset-bottom, 0px));
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 20px calc(56px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Gruppe */
