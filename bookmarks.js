@@ -145,6 +145,10 @@
     try { localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(iconCache)); } catch { /* ignorieren */ }
   };
 
+  // Antwortet eine Seite so lange nicht, gilt sie als nicht erreichbar: Die übrigen Pfade
+  // auf ihr werden übersprungen, sonst dauert die Suche wegen der Timeouts Minuten.
+  const ICON_TIMEOUT = 5000;
+
   function cachedSources(item) {
     const list = hiresSources(item);
     const known = iconCache[item.url.origin];
@@ -262,13 +266,19 @@
         const img = new Image();
         img.alt = '';
         img.decoding = 'async';
+        const timer = setTimeout(() => {
+          img.onload = img.onerror = null;
+          img.src = '';
+          tryNext(s.src.startsWith(`${key}/`) ? list.filter((x) => !x.src.startsWith(`${key}/`)) : list);
+        }, ICON_TIMEOUT);
         img.onload = () => {
+          clearTimeout(timer);
           if (img.naturalWidth < s.min) { tryNext(list); return; }
           rememberIcon(key, s.src);
           const glyph = s.kind !== 'full' && analysis && !analysis.filled;
           show(img, glyph ? 'glyph-hi' : 'fill');
         };
-        img.onerror = () => tryNext(list);
+        img.onerror = () => { clearTimeout(timer); tryNext(list); };
         img.src = s.src;
       })(sources);
     };
