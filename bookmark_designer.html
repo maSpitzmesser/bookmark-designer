@@ -227,12 +227,13 @@ body::before {
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
   pointer-events: none;
 }
-.sec-head::after, .menu-btn::after {
+.sec-head::after, .menu-btn::after, .menu .actions::after {
   content: "";
   position: absolute;
   inset: 0;
   padding: 1.5px;
   border-radius: inherit;
+  z-index: 1;
   corner-shape: inherit;
   background:
     radial-gradient(75% 130% at 22% 0, rgb(255 255 255 / var(--specular-a)) 0, rgb(255 255 255 / 0) 62%),
@@ -860,7 +861,7 @@ body.has-bg.bg-bright {
   backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
   box-shadow: var(--glass-rim);
 }
-.no-lens .sec-head, .no-lens .menu-btn {
+.no-lens .sec-head, .no-lens .menu-btn, .no-lens .menu .actions {
   -webkit-backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94) !important;
   backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94) !important;
 }
@@ -882,11 +883,23 @@ body.has-bg.bg-bright {
 .menu .actions {
   display: none; position: absolute; right: 0; top: calc(100% + 10px);
   flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 2px;
-  min-width: 230px; padding: 8px; border-radius: 22px; background: var(--bar);
-  box-shadow: inset 0 0 0 0.5px var(--bar-ring), 0 2px 6px rgba(15,20,60,.15), 0 18px 40px -8px rgba(15,20,60,.35);
+  min-width: 230px; padding: 8px; border-radius: 22px;
+  --bar-text: #fff;
+  --bar-text-2: rgb(255 255 255 / 0.72);
+  --specular-a: 0.38;
+  --specular-b: 0.22;
+  --glass-rim:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.08),
+    inset 0 0 18px rgb(255 255 255 / 0.025);
+  color: #fff;
+  background: linear-gradient(180deg, rgb(5 6 10 / 0.62), rgb(0 0 0 / 0.52));
+  -webkit-backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
+  backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
+  box-shadow: var(--glass-rim), 0 2px 6px rgba(15,20,60,.15), 0 18px 40px -8px rgba(15,20,60,.35);
 }
 .menu.open .actions { display: flex; animation: menuIn 0.22s cubic-bezier(0.3, 1.4, 0.5, 1); transform-origin: top right; }
 @keyframes menuIn { from { opacity: 0; transform: scale(0.92) translateY(-6px); } }
+.menu .actions > * { position: relative; z-index: 2; }
 .menu .actions .btn { width: 100%; justify-content: flex-start; padding: 11px 14px; border-radius: 14px; background: transparent; box-shadow: none; }
 .menu .actions .btn:hover { transform: none; background: rgba(120, 120, 128, 0.18); }
 .menu .actions .btn:disabled { opacity: 0.4; }
@@ -1728,7 +1741,7 @@ body.has-bg.bg-bright {
     try {
       liquidGlass(
         [...board.querySelectorAll('.dock')],
-        [...document.querySelectorAll('.sec-head, #btnMenu')],
+        [...document.querySelectorAll('.sec-head, #btnMenu, #menu .actions')],
       );
     }
     catch (err) { console.warn('Liquid-Glass-Effekte nicht verfügbar:', err); }
