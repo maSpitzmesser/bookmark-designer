@@ -227,7 +227,7 @@ body::before {
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
   pointer-events: none;
 }
-.sec-head::after, .menu-btn::after, .menu .actions::after {
+.sec-head::after, .menu-btn::after, .menu .actions::after, .modal::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -861,7 +861,31 @@ body.has-bg.bg-bright {
   backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
   box-shadow: var(--glass-rim);
 }
-.no-lens .sec-head, .no-lens .menu-btn, .no-lens .menu .actions {
+.modal {
+  --bar-text: #fff;
+  --bar-text-2: rgb(255 255 255 / 0.72);
+  --specular-a: 0.38;
+  --specular-b: 0.22;
+  --glass-rim:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.08),
+    inset 0 0 18px rgb(255 255 255 / 0.025);
+  isolation: isolate;
+  color: var(--bar-text);
+  background: linear-gradient(180deg, rgb(5 6 10 / 0.62), rgb(0 0 0 / 0.52));
+  -webkit-backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
+  backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
+  box-shadow: var(--glass-rim), 0 30px 80px rgb(0 0 0 / 0.4);
+}
+.modal::after {
+  z-index: 1;
+}
+.modal > * { position: relative; z-index: 2; }
+.modal::backdrop {
+  background: rgb(10 12 20 / 0.35);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.no-lens .sec-head, .no-lens .menu-btn, .no-lens .menu .actions, .no-lens .modal {
   -webkit-backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94) !important;
   backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94) !important;
 }
@@ -1741,7 +1765,7 @@ body.has-bg.bg-bright {
     try {
       liquidGlass(
         [...board.querySelectorAll('.dock')],
-        [...document.querySelectorAll('.sec-head, #btnMenu, #menu .actions')],
+        [...document.querySelectorAll('.sec-head, #btnMenu, #menu .actions, .modal')],
       );
     }
     catch (err) { console.warn('Liquid-Glass-Effekte nicht verfügbar:', err); }
