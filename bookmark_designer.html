@@ -426,7 +426,8 @@ body::before {
 
 .btn:hover { transform: scale(1.04); }
 .btn:active { transform: scale(0.96); transition-duration: 0.08s; }
-.btn:focus-within { outline: 3px solid var(--tint); outline-offset: 2px; }
+.btn:focus-visible, .btn:has(:focus-visible) { outline: 3px solid var(--tint); outline-offset: 2px; }
+.btn:focus:not(:focus-visible) { outline: none; }
 
 .sr {
   position: absolute;
