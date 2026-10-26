@@ -285,6 +285,15 @@ body::before {
   outline: none;
 }
 
+.app.is-right-dragging {
+  z-index: 100;
+  pointer-events: none;
+  transition: none !important;
+  transform: translate3d(var(--drag-x), var(--drag-y), 0) scale(1.08);
+  filter: drop-shadow(0 12px 18px rgb(0 0 0 / 0.35));
+}
+.app.is-right-dragging .tip { opacity: 0; }
+
 /* App-Symbol: voll ausgefüllte, blickdichte Kachel, kein Glas */
 .icon {
   position: relative;
@@ -2130,9 +2139,11 @@ body.has-bg.bg-bright {
       rightDrag.started = true;
       hideBookmarkContext();
       drag = { item: rightDrag.item, target: null };
-      rightDrag.app.classList.add('is-dragging');
+      rightDrag.app.classList.add('is-right-dragging');
       document.body.classList.add('is-dragging-item');
     }
+    rightDrag.app.style.setProperty('--drag-x', `${e.clientX - rightDrag.x}px`);
+    rightDrag.app.style.setProperty('--drag-y', `${e.clientY - rightDrag.y}px`);
     if (e.target instanceof Element) updateDropTarget(e.target, e.clientX, e.clientY);
     e.preventDefault();
   });
@@ -2144,6 +2155,9 @@ body.has-bg.bg-bright {
     if (!state.started) return;
     suppressContextUntil = performance.now() + 800;
     const target = drag && drag.target;
+    state.app.classList.remove('is-right-dragging');
+    state.app.style.removeProperty('--drag-x');
+    state.app.style.removeProperty('--drag-y');
     endDrag();
     if (target) moveItem(state.item, target.folder, target.idx);
   });
@@ -2151,6 +2165,9 @@ body.has-bg.bg-bright {
   window.addEventListener('pointercancel', (e) => {
     if (!rightDrag || e.pointerId !== rightDrag.pointerId) return;
     const started = rightDrag.started;
+    rightDrag.app.classList.remove('is-right-dragging');
+    rightDrag.app.style.removeProperty('--drag-x');
+    rightDrag.app.style.removeProperty('--drag-y');
     rightDrag = null;
     if (started) endDrag();
   });
