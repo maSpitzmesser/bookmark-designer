@@ -227,6 +227,22 @@ body::before {
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
   pointer-events: none;
 }
+.sec-head::after, .menu-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  corner-shape: inherit;
+  background:
+    radial-gradient(75% 130% at 22% 0, rgb(255 255 255 / var(--specular-a)) 0, rgb(255 255 255 / 0) 62%),
+    radial-gradient(55% 110% at 100% 100%, rgb(255 255 255 / var(--specular-b)) 0, rgb(255 255 255 / 0) 62%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0.04));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+}
 
 .app {
   position: relative;
@@ -831,18 +847,17 @@ body.has-bg.bg-bright {
 .sec-head, .menu-btn {
   --bar-text: #fff;
   --bar-text-2: rgb(255 255 255 / 0.72);
+  position: relative;
   color: var(--bar-text);
   background:
-    radial-gradient(75% 130% at 22% 0, rgb(255 255 255 / 0.18) 0, rgb(255 255 255 / 0) 62%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.025)),
-    rgb(0 0 0 / 0.72);
-  -webkit-backdrop-filter: blur(12px) saturate(var(--saturation)) brightness(0.72);
-  backdrop-filter: blur(12px) saturate(var(--saturation)) brightness(0.72);
-  box-shadow:
-    inset 0 0 0 0.5px rgb(255 255 255 / 0.22),
-    inset 0 1px 0 rgb(255 255 255 / 0.28),
-    inset 0 -1px 0 rgb(0 0 0 / 0.75),
-    0 6px 14px rgb(0 0 0 / 0.24);
+    linear-gradient(180deg, rgb(20 23 31 / 0.58), rgb(5 6 12 / 0.48));
+  -webkit-backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
+  backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
+  box-shadow: var(--glass-rim);
+}
+.no-lens .sec-head, .no-lens .menu-btn {
+  -webkit-backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94) !important;
+  backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94) !important;
 }
 
 /* === Hamburger-Menü für die Einstellungen === */
@@ -1400,7 +1415,10 @@ body.has-bg.bg-bright {
     return url;
   }
 
+  const lensObservers = new WeakMap();
+
   function attachLens(dock, index, defs) {
+    lensObservers.get(dock)?.();
     const id = `lg-lens-${index}`;
     const filter = document.createElementNS(SVG_NS, 'filter');
     filter.setAttribute('id', id);
@@ -1435,11 +1453,16 @@ body.has-bg.bg-bright {
 
     let timer = 0;
     let first = true;
-    new ResizeObserver(() => {
+    const observer = new ResizeObserver(() => {
       clearTimeout(timer);
       timer = setTimeout(update, first ? 0 : 150);
       first = false;
-    }).observe(dock);
+    });
+    lensObservers.set(dock, () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    });
+    observer.observe(dock);
   }
 
 
@@ -1457,8 +1480,8 @@ body.has-bg.bg-bright {
     docks.forEach((d) => ro.observe(d));
   }
 
-  function liquidGlass(docks) {
-    if (!docks.length) return;
+  function liquidGlass(docks, controls = []) {
+    if (!docks.length && !controls.length) return;
     fitRadius(docks);
     if (!canRefract || !('ResizeObserver' in window)) return;
 
@@ -1472,7 +1495,7 @@ body.has-bg.bg-bright {
     const defs = document.createElementNS(SVG_NS, 'defs');
     svg.append(defs);
     document.body.append(svg);
-    docks.forEach((dock, i) => attachLens(dock, i, defs));
+    [...docks, ...controls].forEach((surface, i) => attachLens(surface, i, defs));
   }
 
 
@@ -1695,7 +1718,12 @@ body.has-bg.bg-bright {
       ? panels.map(buildSection)
       : [h('p', { class: 'board-empty', text: 'Alle Lesezeichen sind entfernt. Mit „Bearbeiten“ kannst du neue hinzufügen.' })]));
 
-    try { liquidGlass([...board.querySelectorAll('.dock')]); }
+    try {
+      liquidGlass(
+        [...board.querySelectorAll('.dock')],
+        [...document.querySelectorAll('.sec-head, #btnMenu')],
+      );
+    }
     catch (err) { console.warn('Liquid-Glass-Effekte nicht verfügbar:', err); }
     window.scrollTo(0, y);
   }

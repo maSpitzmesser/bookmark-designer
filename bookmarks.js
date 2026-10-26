@@ -322,7 +322,10 @@
     return canvas.toDataURL('image/png');
   }
 
+  const lensObservers = new WeakMap();
+
   function attachLens(dock, index, defs) {
+    lensObservers.get(dock)?.();
     const id = `lg-lens-${index}`;
     const filter = document.createElementNS(SVG_NS, 'filter');
     filter.setAttribute('id', id);
@@ -357,11 +360,16 @@
 
     let timer = 0;
     let first = true;
-    new ResizeObserver(() => {
+    const observer = new ResizeObserver(() => {
       clearTimeout(timer);
       timer = setTimeout(update, first ? 0 : 150);
       first = false;
-    }).observe(dock);
+    });
+    lensObservers.set(dock, () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    });
+    observer.observe(dock);
   }
 
 
@@ -379,8 +387,8 @@
     docks.forEach((d) => ro.observe(d));
   }
 
-  function liquidGlass(docks) {
-    if (!docks.length) return;
+  function liquidGlass(docks, controls = []) {
+    if (!docks.length && !controls.length) return;
     fitRadius(docks);
     if (!canRefract || !('ResizeObserver' in window)) return;
 
@@ -394,7 +402,7 @@
     const defs = document.createElementNS(SVG_NS, 'defs');
     svg.append(defs);
     document.body.append(svg);
-    docks.forEach((dock, i) => attachLens(dock, i, defs));
+    [...docks, ...controls].forEach((surface, i) => attachLens(surface, i, defs));
   }
 
 
@@ -461,7 +469,7 @@
       document.body.append(main);
       root.classList.add('bm-ready');
 
-      try { liquidGlass([...main.querySelectorAll('.dock')]); }
+      try { liquidGlass([...main.querySelectorAll('.dock')], [...main.querySelectorAll('.sec-head')]); }
       catch (err) { console.warn('Liquid-Glass-Effekte nicht verfügbar:', err); }
     } catch (err) {
       console.error('bookmarks.js:', err); // Bei Fehlern bleibt die Original-Liste sichtbar
