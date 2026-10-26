@@ -221,7 +221,6 @@ body::before {
 /* Das Dock: Liquid Glass wie bei iOS 26 (klar, leicht aufgehellt, weiche Eckenform, feine Lichtkante) */
 .dock {
   position: relative;
-  transform-origin: top center;
   display: inline-flex;
   flex-wrap: wrap;
   gap: 16px 10px;
