@@ -1319,7 +1319,7 @@ body.has-bg.bg-bright {
   function hiresSources(item) {
     const list = [];
     const { protocol, origin, hostname } = item.url;
-    if (!/^https?:$/.test(protocol) || isLocal(hostname)) return list;
+    if (!/^https?:$/.test(protocol) || isLocal(hostname) || !hostname.includes('.')) return list;
     if (HIRES.appleTouch) list.push({ src: `${origin}/apple-touch-icon.png`, min: 100, kind: 'full' });
     if (HIRES.google) {
       list.push({ src: `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`, min: 48, kind: 'hi' });
@@ -2092,10 +2092,12 @@ body.has-bg.bg-bright {
   });
   addForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    let value = addUrl.value.trim();
-    value = normalizeInput(value);
+    const raw = addUrl.value.trim();
+    const value = normalizeInput(raw);
     const url = value ? safeUrl(value) : null;
-    const complete = url && (url.protocol === 'file:' || url.hostname.includes('.') || isLocal(url.hostname));
+    // Mit selbst angegebenem Protokoll oder Port sind auch Rechnernamen ohne Punkt erlaubt, z. B. http://pi/
+    const explicit = value !== `https://${raw}`;
+    const complete = url && (url.protocol === 'file:' || url.hostname.includes('.') || isLocal(url.hostname) || explicit);
     if (!complete) {
       addError.textContent = 'Bitte gib eine vollständige Adresse ein, zum Beispiel beispiel.de.';
       addError.hidden = false;

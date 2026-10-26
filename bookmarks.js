@@ -111,7 +111,7 @@
   function hiresSources(item) {
     const list = [];
     const { protocol, origin, hostname } = item.url;
-    if (!/^https?:$/.test(protocol) || isLocal(hostname)) return list;
+    if (!/^https?:$/.test(protocol) || isLocal(hostname) || !hostname.includes('.')) return list;
     if (HIRES.appleTouch) list.push({ src: `${origin}/apple-touch-icon.png`, min: 100, kind: 'full' });
     if (HIRES.google) {
       list.push({ src: `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`, min: 48, kind: 'hi' });
