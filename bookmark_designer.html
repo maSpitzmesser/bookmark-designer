@@ -335,12 +335,9 @@ body::before {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
 }
 
-/* Dock-Vergrößerung: Symbol unter dem Zeiger plus die direkten Nachbarn */
+/* Dock-Vergrößerung nur für das Symbol unter dem Zeiger */
 .app:hover .icon,
 .app:focus-visible .icon { transform: scale(1.32); }
-
-.app:hover + .app .icon,
-.app:has(+ .app:hover) .icon { transform: scale(1.14); }
 
 .app:active .icon { transform: scale(1.2); transition-duration: 0.08s; }
 
@@ -424,8 +421,7 @@ body::before {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
-  .app:hover .icon, .app:focus-visible .icon,
-  .app:hover + .app .icon, .app:has(+ .app:hover) .icon { transform: none; }
+  .app:hover .icon, .app:focus-visible .icon { transform: none; }
 }
 
 /* ---------- Import-Oberfläche ---------- */
@@ -574,9 +570,7 @@ body.is-drop::after {
 
 /* Im Bearbeiten-Modus keine Dock-Vergrößerung */
 .editing .app:hover .icon,
-.editing .app:focus-visible .icon,
-.editing .app:hover + .app .icon,
-.editing .app:has(+ .app:hover) .icon { transform: none; }
+.editing .app:focus-visible .icon { transform: none; }
 
 .is-dragging { opacity: 0.35; }
 
