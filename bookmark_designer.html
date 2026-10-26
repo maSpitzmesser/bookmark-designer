@@ -2111,9 +2111,12 @@ body.has-bg.bg-bright {
     if (itemToEdit) {
       const item = itemToEdit;
       pushHistory();
+      // Gespeichertes Favicon gehört zur alten Seite: bei anderem Rechnernamen verwerfen
+      if (!item.url || item.url.host !== url.host) delete item.attrs.icon;
       item.attrs.href = url.href;
       item.rawTitle = title;
       decorate(item);
+      item._el = null; // Symbol mit neuer Adresse, neuem Namen und Icon neu aufbauen
       touch(parentOf(item));
       commit();
     } else {
