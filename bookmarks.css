@@ -57,7 +57,7 @@
     --glass-reflex-dark: 1.6;
     --glass-reflex-light: 0.6;
     --saturation: 140%;
-    --specular-a: rgba(255, 255, 255, 0.7);
+    --specular-a: rgba(255, 255, 255, 0.35);
     --specular-b: rgba(255, 255, 255, 0.42);
     --glass-fill: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05));
 
@@ -350,7 +350,7 @@ body::before {
   font-weight: 500;
   letter-spacing: 0;
   text-align: center;
-  --specular-a: 0.38;
+  --specular-a: 0.19;
   --specular-b: 0.22;
   --glass-rim:
     inset 0 0 0 0.5px rgb(255 255 255 / 0.08),
@@ -410,11 +410,11 @@ body::before {
   --glass-rim:
     inset 0 0 0 0.5px rgb(255 255 255 / 0.12),
     inset 0 0 18px rgb(255 255 255 / 0.05);
-  --specular-a: 0.95;
+  --specular-a: 0.475;
   --specular-b: 0.65;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --specular-a: 0.75; --specular-b: 0.5; --glass-fill: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)); }
+  :root { --specular-a: 0.375; --specular-b: 0.5; --glass-fill: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)); }
 }
 .dock { box-shadow: var(--glass-rim); }
 .dock::after {
@@ -427,7 +427,7 @@ body::before {
 .sec-head {
   --bar-text: #fff;
   --bar-text-2: rgb(255 255 255 / 0.72);
-  --specular-a: 0.38;
+  --specular-a: 0.19;
   --specular-b: 0.22;
   --glass-rim:
     inset 0 0 0 0.5px rgb(255 255 255 / 0.08),
