@@ -143,7 +143,6 @@ body::before {
 /* Gruppe */
 .sec { margin-top: 30px; }
 .sec:first-child { margin-top: 0; }
-.sec.is-closed { margin-top: 14px; }
 
 .sec-title {
   width: fit-content;
