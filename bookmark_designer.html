@@ -999,6 +999,7 @@ body.has-bg.bg-bright {
 .bookmark-context button:hover,
 .bookmark-context button:focus-visible { background: rgb(255 255 255 / 0.14); }
 .bookmark-context #deleteBookmark { color: #ff6961; }
+.bookmark-context button[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -1051,7 +1052,22 @@ body.has-bg.bg-bright {
 <div class="bookmark-context" id="bookmarkContext" role="menu" hidden>
   <button type="button" id="editBookmark" role="menuitem">Link bearbeiten</button>
   <button type="button" id="deleteBookmark" role="menuitem">Löschen</button>
+  <button type="button" id="editSectionTitle" role="menuitem" hidden>Überschrift bearbeiten</button>
 </div>
+
+<dialog class="modal" id="sectionTitleDialog" aria-labelledby="sectionTitleHeading">
+  <form id="sectionTitleForm" novalidate>
+    <h3 id="sectionTitleHeading">Überschrift bearbeiten</h3>
+    <label>Text
+      <input type="text" id="sectionTitleInput" autocomplete="off" maxlength="256">
+    </label>
+    <p class="form-error" id="sectionTitleError" hidden></p>
+    <div class="modal-actions">
+      <button class="btn" type="button" id="sectionTitleCancel">Abbrechen</button>
+      <button class="btn btn-primary" type="submit">Speichern</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog class="modal modal-wide" id="bgDialog" aria-labelledby="bgHeading">
   <div class="modal-body">
@@ -1649,6 +1665,12 @@ body.has-bg.bg-bright {
   const bookmarkContext = $('bookmarkContext');
   const editBookmark = $('editBookmark');
   const deleteBookmark = $('deleteBookmark');
+  const editSectionTitle = $('editSectionTitle');
+  const sectionTitleDialog = $('sectionTitleDialog');
+  const sectionTitleForm = $('sectionTitleForm');
+  const sectionTitleInput = $('sectionTitleInput');
+  const sectionTitleError = $('sectionTitleError');
+  const sectionTitleCancel = $('sectionTitleCancel');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const supportsFolder = typeof window.showDirectoryPicker === 'function';
 
@@ -1689,7 +1711,9 @@ body.has-bg.bg-bright {
   const touch = (folder) => { if (folder && 'last_modified' in folder.attrs) folder.attrs.last_modified = nowSec(); };
 
   function pushHistory() {
-    history.push(allFolders(model.root).map((f) => [f, f.children.slice()]));
+    const snapshot = allFolders(model.root).map((f) => [f, f.children.slice()]);
+    snapshot.folderNames = new Map(allFolders(model.root).map((folder) => [folder, folder.name]));
+    history.push(snapshot);
     if (history.length > 50) history.shift();
   }
 
@@ -1771,6 +1795,7 @@ body.has-bg.bg-bright {
     const snapshot = history.pop();
     if (!snapshot) return;
     for (const [folder, kids] of snapshot) folder.children = kids;
+    for (const [folder, name] of snapshot.folderNames || []) folder.name = name;
     hideToast();
     commit();
   }
@@ -1974,6 +1999,7 @@ body.has-bg.bg-bright {
 
   let editTarget = null;
   let contextTarget = null;
+  let sectionTitleTarget = null;
 
   function openEditDialog(item) {
     editTarget = item;
@@ -1995,13 +2021,16 @@ body.has-bg.bg-bright {
 
   function showBookmarkContext(item, x, y) {
     contextTarget = item;
+    editBookmark.hidden = !item || item.kind === 'folder';
+    deleteBookmark.hidden = !item || item.kind === 'folder';
+    editSectionTitle.hidden = !item || item.kind !== 'folder';
     bookmarkContext.hidden = false;
     bookmarkContext.style.left = `${x}px`;
     bookmarkContext.style.top = `${y}px`;
     const rect = bookmarkContext.getBoundingClientRect();
     bookmarkContext.style.left = `${Math.max(8, Math.min(x, innerWidth - rect.width - 8))}px`;
     bookmarkContext.style.top = `${Math.max(8, Math.min(y, innerHeight - rect.height - 8))}px`;
-    editBookmark.focus({ preventScroll: true });
+    (item && item.kind === 'folder' ? editSectionTitle : editBookmark).focus({ preventScroll: true });
   }
 
   editBookmark.addEventListener('click', () => {
@@ -2013,6 +2042,39 @@ body.has-bg.bg-bright {
     const item = contextTarget;
     hideBookmarkContext();
     if (item) removeItem(item);
+  });
+  editSectionTitle.addEventListener('click', () => {
+    const folder = contextTarget;
+    hideBookmarkContext();
+    if (!folder || folder.kind !== 'folder') return;
+    sectionTitleTarget = folder;
+    sectionTitleInput.value = folder.name || '';
+    sectionTitleError.hidden = true;
+    sectionTitleDialog.showModal();
+    sectionTitleInput.focus();
+    sectionTitleInput.select();
+  });
+  sectionTitleCancel.addEventListener('click', () => sectionTitleDialog.close());
+  sectionTitleDialog.addEventListener('close', () => { sectionTitleTarget = null; });
+  sectionTitleForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = sectionTitleInput.value.trim();
+    if (!name) {
+      sectionTitleError.textContent = 'Bitte gib eine Überschrift ein.';
+      sectionTitleError.hidden = false;
+      sectionTitleInput.focus();
+      return;
+    }
+    const folder = sectionTitleTarget;
+    if (!folder || folder.kind !== 'folder') {
+      sectionTitleDialog.close();
+      return;
+    }
+    pushHistory();
+    folder.name = name;
+    touch(parentOf(folder));
+    sectionTitleDialog.close();
+    commit();
   });
   document.addEventListener('click', (e) => {
     if (!bookmarkContext.contains(e.target)) hideBookmarkContext();
@@ -2240,11 +2302,19 @@ body.has-bg.bg-bright {
   }, true);
 
   board.addEventListener('contextmenu', (e) => {
-    const app = e.target.closest('a.app');
-    if (!app || !app._item) return;
-    e.preventDefault();
-    if (performance.now() < suppressContextUntil) return;
-    showBookmarkContext(app._item, e.clientX, e.clientY);
+    const target = e.target instanceof Element ? e.target : null;
+    const app = target && target.closest('a.app');
+    const head = target && target.closest('.sec-head');
+    if (app && app._item) {
+      e.preventDefault();
+      if (performance.now() < suppressContextUntil) return;
+      showBookmarkContext(app._item, e.clientX, e.clientY);
+    } else if (head) {
+      e.preventDefault();
+      const section = head.closest('.sec');
+      const folder = section && foldersById.get(section.dataset.fid);
+      if (folder) showBookmarkContext(folder, e.clientX, e.clientY);
+    }
   });
 
   board.addEventListener('keydown', (e) => {
