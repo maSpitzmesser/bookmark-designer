@@ -1329,9 +1329,9 @@ body.has-bg.bg-bright {
 
   // Merkt sich pro Seite, welche Quelle ein großes Icon geliefert hat (oder dass keine es tat).
   // Beim nächsten Laden wird sie zuerst probiert; das Bild selbst kommt dann aus dem Browser-Cache.
-  // Fehlschläge werden eine Woche lang nicht erneut abgefragt.
+  // Fehlschläge werden 90 Tage lang nicht erneut abgefragt.
   const ICON_CACHE_KEY = 'bm-icons';
-  const MISS_TTL = 7 * 24 * 3600 * 1000;
+  const MISS_TTL = 90 * 24 * 3600 * 1000;
   let iconCache;
   try { iconCache = JSON.parse(localStorage.getItem(ICON_CACHE_KEY) || '{}') || {}; } catch { iconCache = {}; }
   const rememberIcon = (key, src) => {
