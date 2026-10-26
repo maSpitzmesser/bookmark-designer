@@ -386,9 +386,7 @@ body::before {
 }
 
 .status {
-  flex: 1 1 14rem;
-  min-width: 0;
-  margin: 0 0 0 8px;
+  margin: 0;
   font-size: 13px;
   line-height: 18px;
   color: var(--label-2);
@@ -849,13 +847,13 @@ body.has-bg.bg-bright {
 .menu .actions .btn { width: 100%; justify-content: flex-start; padding: 11px 14px; border-radius: 14px; background: transparent; box-shadow: none; }
 .menu .actions .btn:hover { transform: none; background: rgba(120, 120, 128, 0.18); }
 .menu .actions .btn:disabled { opacity: 0.4; }
+.menu .actions .status { flex: none; margin: 6px 6px 2px; padding: 10px 8px 4px; border-top: 1px solid var(--bar-ring); }
 </style>
 </head>
 <body>
 <div id="bgLayer" aria-hidden="true"></div>
 <main class="wrap">
   <div class="bar">
-    <p class="status" id="status" aria-live="polite"></p>
     <div class="menu" id="menu">
     <button class="btn menu-btn" type="button" id="btnMenu" aria-label="Menü" aria-haspopup="true" aria-expanded="false"><span class="bars"></span></button>
     <div class="actions">
@@ -869,6 +867,7 @@ body.has-bg.bg-bright {
         Datei importieren
         <input class="sr" type="file" id="fileInput" accept=".html,.htm,text/html">
       </label>
+      <p class="status" id="status" aria-live="polite"></p>
     </div>
     </div>
   </div>
