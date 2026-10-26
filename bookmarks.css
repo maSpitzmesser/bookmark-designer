@@ -355,17 +355,27 @@ body::before {
   font-weight: 500;
   letter-spacing: 0;
   text-align: center;
+  --specular-a: 0.38;
+  --specular-b: 0.22;
+  --glass-rim:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.08),
+    inset 0 0 18px rgb(255 255 255 / 0.025);
   color: #fff;
-  background: var(--tip-bg);
-  -webkit-backdrop-filter: blur(8px) saturate(var(--saturation));
-  backdrop-filter: blur(8px) saturate(var(--saturation));
+  background: linear-gradient(180deg, rgb(5 6 10 / 0.62), rgb(0 0 0 / 0.52));
+  -webkit-backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
+  backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
   border-radius: 16px;
   box-shadow: var(--glass-rim);
+  isolation: isolate;
   overflow-wrap: anywhere;
   opacity: 0;
   pointer-events: none;
   transform: translate(calc(-50% + var(--dx, 0px)), 6px);
   transition: opacity 0.12s, transform 0.18s;
+}
+.no-lens .tip {
+  -webkit-backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94) !important;
+  backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94) !important;
 }
 
 .app:hover .tip,
