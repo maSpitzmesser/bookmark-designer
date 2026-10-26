@@ -441,15 +441,46 @@
           el.classList.toggle('is-closed', !open);
           head.setAttribute('aria-expanded', String(open));
           dock.getAnimations().forEach((a) => a.cancel());
-          const hidden = { opacity: 0, transform: 'translateY(-10px) scale(0.96)' };
-          const shown = { opacity: 1, transform: 'none' };
+          const dockRadius = getComputedStyle(dock).borderRadius;
+          const collapsed = {
+            opacity: 0,
+            clipPath: 'inset(0 0 100% 0 round 50%)',
+            transform: 'scale(0.96, 0.02)',
+            borderRadius: '50%',
+            filter: 'blur(3px)',
+          };
+          const shown = {
+            opacity: 1,
+            clipPath: `inset(0 0 0 0 round ${dockRadius})`,
+            transform: 'none',
+            borderRadius: dockRadius,
+            filter: 'blur(0px)',
+          };
           if (open) {
             dock.hidden = false;
             if (animate && !reduceMotion) {
-              dock.animate([hidden, shown], { duration: 340, easing: 'cubic-bezier(0.3, 1.4, 0.5, 1)' });
+              dock.animate([
+                { ...collapsed, offset: 0 },
+                { ...shown, opacity: 0.96, transform: 'scale(0.985, 1.035)', offset: 0.68 },
+                { ...shown, transform: 'scale(1.005, 0.99)', offset: 0.86 },
+                shown,
+              ], { duration: 520, easing: 'cubic-bezier(0.22, 1.2, 0.36, 1)' });
             }
           } else if (animate && !reduceMotion) {
-            const a = dock.animate([shown, hidden], { duration: 180, easing: 'ease-in', fill: 'forwards' });
+            const a = dock.animate([
+              shown,
+              { ...shown, transform: 'scale(0.99, 1.025)', offset: 0.16 },
+              {
+                ...shown,
+                opacity: 0.9,
+                clipPath: 'inset(0 0 28% 0 round 38px)',
+                transform: 'scale(0.98, 0.72)',
+                borderRadius: '42% 42% 50% 50%',
+                filter: 'blur(1px)',
+                offset: 0.58,
+              },
+              collapsed,
+            ], { duration: 380, easing: 'cubic-bezier(0.45, 0, 0.8, 0.35)', fill: 'forwards' });
             a.onfinish = () => { if (el.classList.contains('is-closed')) dock.hidden = true; a.cancel(); };
           } else {
             dock.hidden = true;
