@@ -2159,8 +2159,11 @@ body.has-bg.bg-bright {
       const sourceDock = rightDrag.app.closest('.dock');
       const sourceApps = dockApps(sourceDock);
       const sourceIndex = sourceApps.indexOf(rightDrag.app);
+      rightDrag.sourceDock = sourceDock;
+      rightDrag.sourceNextSibling = rightDrag.app.nextSibling;
       rightDrag.app.classList.add('is-right-dragging');
       showDropSpace(sourceDock, sourceIndex, sourceApps.filter((app) => app !== rightDrag.app));
+      document.body.append(rightDrag.app);
       document.body.classList.add('is-dragging-item');
     }
     rightDrag.app.style.setProperty('--drag-left', `${e.clientX - rightDrag.offsetX}px`);
@@ -2182,9 +2185,12 @@ body.has-bg.bg-bright {
         return [app._item, { left: rect.left, top: rect.top }];
       }),
     );
+    const rect = state.app.getBoundingClientRect();
+    previousPositions.set(state.item, { left: rect.left, top: rect.top });
     state.app.classList.remove('is-right-dragging');
     state.app.style.removeProperty('--drag-left');
     state.app.style.removeProperty('--drag-top');
+    if (!target) state.sourceDock.insertBefore(state.app, state.sourceNextSibling);
     endDrag();
     if (target) moveItem(state.item, target.folder, target.idx, previousPositions);
   });
@@ -2195,6 +2201,7 @@ body.has-bg.bg-bright {
     rightDrag.app.classList.remove('is-right-dragging');
     rightDrag.app.style.removeProperty('--drag-left');
     rightDrag.app.style.removeProperty('--drag-top');
+    if (rightDrag.started) rightDrag.sourceDock.insertBefore(rightDrag.app, rightDrag.sourceNextSibling);
     rightDrag = null;
     if (started) endDrag();
   });
