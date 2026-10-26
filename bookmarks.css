@@ -147,7 +147,6 @@ body::before {
 .sec-title {
   width: fit-content;
   max-width: 100%;
-  margin: 0;
   font: inherit;
 }
 
