@@ -104,15 +104,28 @@
   // Die Export-Datei enthält nur winzige 16x16-Favicons. Darum wird zusätzlich versucht,
   // größere Versionen nachzuladen. Gelingt das nicht, bleibt das kleine Favicon bzw. der Buchstabe.
   //   appleTouch: lädt /apple-touch-icon.png direkt von der jeweiligen Seite (180 px, füllt die Kachel).
+  //   altPaths:   probiert danach weitere übliche Ablageorte großer Icons auf der Seite.
   //   google:     fragt zusätzlich Googles Favicon-Dienst ab. Dabei erfährt Google
   //               alle Domains deiner Lesezeichen. Mit false ausschalten.
-  const HIRES = { appleTouch: true, google: true };
+  const HIRES = { appleTouch: true, altPaths: true, google: true };
+
+  // Weitere übliche Ablageorte, der Reihe nach probiert (full = füllt die Kachel, hi = evtl. freigestelltes Zeichen)
+  const ALT_ICON_PATHS = [
+    ['/apple-touch-icon-precomposed.png', 'full'],
+    ['/apple-touch-icon-180x180.png', 'full'],
+    ['/android-chrome-192x192.png', 'hi'],
+    ['/favicon-196x196.png', 'hi'],
+    ['/icon-192.png', 'hi'],
+  ];
 
   function hiresSources(item) {
     const list = [];
     const { protocol, origin, hostname } = item.url;
     if (!/^https?:$/.test(protocol) || isLocal(hostname) || !hostname.includes('.')) return list;
     if (HIRES.appleTouch) list.push({ src: `${origin}/apple-touch-icon.png`, min: 100, kind: 'full' });
+    if (HIRES.altPaths) {
+      for (const [path, kind] of ALT_ICON_PATHS) list.push({ src: origin + path, min: 100, kind });
+    }
     if (HIRES.google) {
       list.push({ src: `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`, min: 48, kind: 'hi' });
     }
@@ -126,9 +139,9 @@
   const MISS_TTL = 90 * 24 * 3600 * 1000;
   let iconCache;
   try { iconCache = JSON.parse(localStorage.getItem(ICON_CACHE_KEY) || '{}') || {}; } catch { iconCache = {}; }
-  const rememberIcon = (key, src) => {
+  const rememberIcon = (key, src, tried) => {
     if (src && iconCache[key] && iconCache[key].src === src) return;
-    iconCache[key] = { src, t: Date.now() };
+    iconCache[key] = src ? { src, t: Date.now() } : { src, t: Date.now(), tried };
     try { localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(iconCache)); } catch { /* ignorieren */ }
   };
 
@@ -136,7 +149,8 @@
     const list = hiresSources(item);
     const known = iconCache[item.url.origin];
     if (!known || !list.length) return list;
-    if (!known.src) return Date.now() - known.t < MISS_TTL ? [] : list;
+    // Kommen neue Quellen hinzu, wird trotz gemerktem Fehlschlag erneut gesucht
+    if (!known.src) return known.tried === list.length && Date.now() - known.t < MISS_TTL ? [] : list;
     const hit = list.find((s) => s.src === known.src);
     return hit ? [hit, ...list.filter((s) => s !== hit)] : list;
   }
@@ -241,9 +255,10 @@
       const key = item.url.origin;
       const sources = cachedSources(item);
       if (!sources.length) return;
+      const tried = sources.length;
       (function tryNext(list) {
         const s = list.shift();
-        if (!s) { rememberIcon(key, ''); return; }
+        if (!s) { rememberIcon(key, '', tried); return; }
         const img = new Image();
         img.alt = '';
         img.decoding = 'async';
