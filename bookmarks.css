@@ -145,8 +145,6 @@ body::before {
 .sec:first-child { margin-top: 0; }
 
 .sec-title {
-  position: relative;
-  z-index: 31;
   width: fit-content;
   max-width: 100%;
   font: inherit;
@@ -234,6 +232,9 @@ body::before {
   backdrop-filter: blur(6px) saturate(var(--saturation)) brightness(0.94);
   box-shadow: var(--glass-rim);
 }
+
+.dock:has(.app:hover),
+.dock:has(.app:focus-visible) { z-index: 31; }
 
 /* Lichtkante: oben entlang der ganzen Kante, unten rechts in der Ecke */
 .dock::after {
@@ -343,7 +344,7 @@ body::before {
   position: absolute;
   left: 50%;
   bottom: calc(100% + 12px);
-  z-index: 10;
+  z-index: 40;
   width: max-content;
   max-width: min(16rem, 86vw);
   padding: 7px 13px;
