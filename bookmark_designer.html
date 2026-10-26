@@ -986,6 +986,7 @@ body.has-bg.bg-bright {
 }
 .bookmark-context button:hover,
 .bookmark-context button:focus-visible { background: rgb(255 255 255 / 0.14); }
+.bookmark-context #deleteBookmark { color: #ff6961; }
 </style>
 </head>
 <body>
@@ -1037,6 +1038,7 @@ body.has-bg.bg-bright {
 
 <div class="bookmark-context" id="bookmarkContext" role="menu" hidden>
   <button type="button" id="editBookmark" role="menuitem">Link bearbeiten</button>
+  <button type="button" id="deleteBookmark" role="menuitem">Löschen</button>
 </div>
 
 <dialog class="modal modal-wide" id="bgDialog" aria-labelledby="bgHeading">
@@ -1634,6 +1636,7 @@ body.has-bg.bg-bright {
   const addSubmit = $('addSubmit');
   const bookmarkContext = $('bookmarkContext');
   const editBookmark = $('editBookmark');
+  const deleteBookmark = $('deleteBookmark');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const supportsFolder = typeof window.showDirectoryPicker === 'function';
 
@@ -1963,6 +1966,11 @@ body.has-bg.bg-bright {
     hideBookmarkContext();
     if (item) openEditDialog(item);
   });
+  deleteBookmark.addEventListener('click', () => {
+    const item = contextTarget;
+    hideBookmarkContext();
+    if (item) removeItem(item);
+  });
   document.addEventListener('click', (e) => {
     if (!bookmarkContext.contains(e.target)) hideBookmarkContext();
   });
@@ -2052,6 +2060,72 @@ body.has-bg.bg-bright {
     drag = null;
   }
 
+  function updateDropTarget(target, x, y) {
+    const dock = target.closest('.dock');
+    const head = target.closest('.sec-head');
+    if (dock && !dock.hidden) {
+      const { idx, apps } = dropIndex(dock, x, y);
+      drag.target = { folder: foldersById.get(dock.dataset.fid), idx };
+      showBar(dock, idx, apps);
+      clearTimeout(expandTimer);
+      expandTimer = 0;
+    } else if (head) {
+      const sec = head.closest('.sec');
+      drag.target = { folder: foldersById.get(sec.dataset.fid), idx: Infinity };
+      if (bar) bar.remove();
+      if (sec.classList.contains('is-closed') && !expandTimer) {
+        expandTimer = setTimeout(() => { expandTimer = 0; sec._toggle(true, true); }, 600);
+      }
+    } else {
+      drag.target = null;
+      if (bar) bar.remove();
+      clearTimeout(expandTimer);
+      expandTimer = 0;
+    }
+  }
+
+  let rightDrag = null;
+  let suppressContextUntil = 0;
+  window.addEventListener('pointerdown', (e) => {
+    if (e.button !== 2) return;
+    const app = e.target instanceof Element ? e.target.closest('a.app') : null;
+    if (!app || !app._item) return;
+    rightDrag = { item: app._item, app, pointerId: e.pointerId, x: e.clientX, y: e.clientY, started: false };
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!rightDrag || e.pointerId !== rightDrag.pointerId || !(e.buttons & 2)) return;
+    const distance = Math.hypot(e.clientX - rightDrag.x, e.clientY - rightDrag.y);
+    if (!rightDrag.started && distance < 6) return;
+    if (!rightDrag.started) {
+      rightDrag.started = true;
+      hideBookmarkContext();
+      drag = { item: rightDrag.item, target: null };
+      rightDrag.app.classList.add('is-dragging');
+      document.body.classList.add('is-dragging-item');
+    }
+    if (e.target instanceof Element) updateDropTarget(e.target, e.clientX, e.clientY);
+    e.preventDefault();
+  });
+
+  window.addEventListener('pointerup', (e) => {
+    if (!rightDrag || e.pointerId !== rightDrag.pointerId) return;
+    const state = rightDrag;
+    rightDrag = null;
+    if (!state.started) return;
+    suppressContextUntil = performance.now() + 800;
+    const target = drag && drag.target;
+    endDrag();
+    if (target) moveItem(state.item, target.folder, target.idx);
+  });
+
+  window.addEventListener('pointercancel', (e) => {
+    if (!rightDrag || e.pointerId !== rightDrag.pointerId) return;
+    const started = rightDrag.started;
+    rightDrag = null;
+    if (started) endDrag();
+  });
+
   board.addEventListener('dragstart', (e) => {
     const a = editing && e.target.closest ? e.target.closest('a.app') : null;
     if (!a || !a._item) return;
@@ -2064,28 +2138,9 @@ body.has-bg.bg-bright {
 
   board.addEventListener('dragover', (e) => {
     if (!drag) return;
-    const dock = e.target.closest('.dock');
-    const head = e.target.closest('.sec-head');
-    if (dock && !dock.hidden) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      const { idx, apps } = dropIndex(dock, e.clientX, e.clientY);
-      drag.target = { folder: foldersById.get(dock.dataset.fid), idx };
-      showBar(dock, idx, apps);
-    } else if (head) {
-      // Über einer Gruppen-Kapsel: ans Ende der Gruppe ablegen, eingeklappte Gruppen öffnen sich nach kurzer Zeit
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      const sec = head.closest('.sec');
-      drag.target = { folder: foldersById.get(sec.dataset.fid), idx: Infinity };
-      if (bar) bar.remove();
-      if (sec.classList.contains('is-closed') && !expandTimer) {
-        expandTimer = setTimeout(() => { expandTimer = 0; sec._toggle(true, true); }, 600);
-      }
-    } else {
-      drag.target = null;
-      if (bar) bar.remove();
-    }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    updateDropTarget(e.target, e.clientX, e.clientY);
   });
 
   board.addEventListener('drop', (e) => {
@@ -2108,6 +2163,7 @@ body.has-bg.bg-bright {
     const app = e.target.closest('a.app');
     if (!app || !app._item) return;
     e.preventDefault();
+    if (performance.now() < suppressContextUntil) return;
     showBookmarkContext(app._item, e.clientX, e.clientY);
   });
 
