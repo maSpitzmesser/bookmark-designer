@@ -242,8 +242,8 @@ body::before {
   border-radius: inherit;
   corner-shape: inherit;
   background:
-    linear-gradient(180deg, var(--specular-a) 0, rgba(255, 255, 255, 0) 30%),
-    radial-gradient(60% 95% at 100% 100%, var(--specular-b) 0, rgba(255, 255, 255, 0) 62%);
+    radial-gradient(75% 130% at 50% 0, var(--specular-a) 0, rgba(255, 255, 255, 0) 62%),
+    radial-gradient(60% 95% at 50% 100%, var(--specular-b) 0, rgba(255, 255, 255, 0) 62%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
@@ -420,8 +420,8 @@ body::before {
 .dock::after {
   padding: 1.5px;
   background:
-    radial-gradient(75% 130% at 22% 0, rgb(255 255 255 / var(--specular-a)) 0, rgb(255 255 255 / 0) 62%),
-    radial-gradient(55% 110% at 100% 100%, rgb(255 255 255 / var(--specular-b)) 0, rgb(255 255 255 / 0) 62%),
+    radial-gradient(75% 130% at 50% 0, rgb(255 255 255 / var(--specular-a)) 0, rgb(255 255 255 / 0) 62%),
+    radial-gradient(55% 110% at 50% 100%, rgb(255 255 255 / var(--specular-b)) 0, rgb(255 255 255 / 0) 62%),
     linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0.04));
 }
 .sec-head {
@@ -448,8 +448,8 @@ body::before {
   border-radius: inherit;
   corner-shape: inherit;
   background:
-    radial-gradient(75% 130% at 22% 0, rgb(255 255 255 / var(--specular-a)) 0, rgb(255 255 255 / 0) 62%),
-    radial-gradient(55% 110% at 100% 100%, rgb(255 255 255 / var(--specular-b)) 0, rgb(255 255 255 / 0) 62%),
+    radial-gradient(75% 130% at 50% 0, rgb(255 255 255 / var(--specular-a)) 0, rgb(255 255 255 / 0) 62%),
+    radial-gradient(55% 110% at 50% 100%, rgb(255 255 255 / var(--specular-b)) 0, rgb(255 255 255 / 0) 62%),
     linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.015));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
