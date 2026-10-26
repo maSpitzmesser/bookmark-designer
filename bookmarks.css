@@ -145,6 +145,8 @@ body::before {
 .sec:first-child { margin-top: 0; }
 
 .sec-title {
+  position: relative;
+  z-index: 31;
   width: fit-content;
   max-width: 100%;
   font: inherit;
