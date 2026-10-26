@@ -809,8 +809,6 @@ body.has-bg.bg-bright {
 .hint a { color: var(--tint); }
 .bg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
-.bg-select { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; margin-left: auto; font-size: 13px; color: var(--bar-text-2); }
-.bg-select select { font: inherit; font-size: 14px; color: var(--bar-text); background: rgba(120, 120, 128, 0.16); border: 0; border-radius: 10px; padding: 7px 10px; }
 
 .bg-panel input[type="search"],
 .bg-panel input[type="text"],
@@ -862,7 +860,6 @@ body.has-bg.bg-bright {
 .modal label.btn { flex-direction: row; gap: 8px; font: 600 15px/20px var(--font); color: var(--bar-text); }
 .modal label.btn.btn-primary, .modal .btn.btn-primary { color: #fff; }
 .modal .btn:not(.btn-primary) { background: rgba(120, 120, 128, 0.2); }
-.modal .bg-select { flex-direction: row; align-items: center; gap: 8px; margin-left: auto; font-size: 13px; color: var(--bar-text-2); }
 .modal .check { flex-direction: row; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 400; color: var(--bar-text); }
 .modal input[type="checkbox"] { flex: none; width: 18px; height: 18px; padding: 0; background: none; border-radius: 4px; accent-color: var(--tint); }
 
@@ -1085,12 +1082,6 @@ body.has-bg.bg-bright {
         <button class="btn" type="button" id="bgLoadApple">Katalog von Apple laden</button>
         <label class="btn" for="bgCatalogFile">Katalogdatei wählen
           <input class="sr" type="file" id="bgCatalogFile" accept=".tar,.json,.gz,application/json,application/x-tar">
-        </label>
-        <label class="bg-select">Qualität
-          <select id="bgQuality">
-            <option value="hd">1080p (H.264)</option>
-            <option value="uhd">4K</option>
-          </select>
         </label>
       </div>
       <p class="hint">Klappt das direkte Laden nicht, lade die Datei selbst herunter und wähle sie bei „Katalogdatei wählen“ aus:
@@ -2601,10 +2592,8 @@ body.has-bg.bg-bright {
     'https://sylvan.apple.com/itunes-assets/Aerials126/v4/c0/45/d9/c045d9d0-9606-1535-62fe-189edb4f79eb/resources-atv-23J-2.tar',
     'https://sylvan.apple.com/Aerials/resources-atv-23J-2.tar',
   ];
-  const QUALITY = {
-    hd: ['url-1080-H264', 'url-1080-SDR', 'url-4K-SDR', 'url-4K-SDR-240FPS'],
-    uhd: ['url-4K-SDR', 'url-4K-SDR-240FPS', 'url-1080-SDR', 'url-1080-H264'],
-  };
+  // Immer 4K; 1080p nur, wenn es ein Video nicht in 4K gibt
+  const QUALITY = ['url-4K-SDR', 'url-4K-SDR-240FPS', 'url-1080-SDR', 'url-1080-H264'];
 
   const bgLayer = $('bgLayer');
   const bgDialog = $('bgDialog');
@@ -2612,7 +2601,6 @@ body.has-bg.bg-bright {
   const bgGrid = $('bgGrid');
   const bgFilter = $('bgFilter');
   const bgCatalogInfo = $('bgCatalogInfo');
-  const bgQuality = $('bgQuality');
   const bgLens = $('bgLens');
 
   let bgState = { type: 'gradient' };
@@ -2621,8 +2609,8 @@ body.has-bg.bg-bright {
   let catalog = [];
 
   const isVideoUrl = (url) => /\.(mp4|m4v|mov|webm|ogv)([?#]|$)/i.test(url);
-  const pickUrl = (urls, quality) => {
-    for (const key of QUALITY[quality] || QUALITY.hd) if (urls[key]) return urls[key];
+  const pickUrl = (urls) => {
+    for (const key of QUALITY) if (urls[key]) return urls[key];
     return Object.values(urls)[0];
   };
 
@@ -2680,10 +2668,61 @@ body.has-bg.bg-bright {
     } catch { return null; }
   }
 
+  // Standbild eines Videos: wird beim Abspielen aufgenommen und beim nächsten Öffnen sofort gezeigt,
+  // bis das Video selbst läuft. Bei Apple-Videos dient bis dahin Apples Vorschaubild.
+  // Bei fremden Adressen verbietet der Browser das Aufnehmen, dann gibt es nur das Vorschaubild.
+  let bgShown = 0;          // Ladevorgang, dessen Bild oder Video gerade angezeigt wird
+  let posterUrl = null;
+  let posterKeySaved = '';
+  const posterKey = (state, src) => (state.type === 'file' ? `file:${state.name}:${state.blob.size}` : src);
+
+  function releasePosterUrl() {
+    if (posterUrl) { URL.revokeObjectURL(posterUrl); posterUrl = null; }
+  }
+
+  async function showPoster(token, key, fallback) {
+    const saved = await idb.get('bg-poster');
+    if (saved && saved.key) posterKeySaved = saved.key;
+    let src = fallback;
+    let objectUrl = null;
+    if (saved && saved.key === key && saved.blob) src = objectUrl = URL.createObjectURL(saved.blob);
+    if (!src || token !== bgToken || bgShown === token) { if (objectUrl) URL.revokeObjectURL(objectUrl); return; }
+    try {
+      const el = await loadMedia(src, false);
+      if (token !== bgToken || bgShown === token) { if (objectUrl) URL.revokeObjectURL(objectUrl); return; }
+      releasePosterUrl();
+      posterUrl = objectUrl;
+      el._poster = token;
+      el.style.opacity = '0';
+      bgLayer.replaceChildren(el);
+      document.body.classList.add('has-bg');
+      const lum = measureBackground(el);
+      document.body.classList.toggle('bg-bright', lum !== null && lum > 0.6);
+      requestAnimationFrame(() => { el.style.opacity = '1'; });
+    } catch { if (objectUrl) URL.revokeObjectURL(objectUrl); }
+  }
+
+  function capturePoster(video, key) {
+    if (key === posterKeySaved || !video.videoWidth) return;
+    try {
+      const scale = Math.min(1, 1920 / video.videoWidth);
+      const c = document.createElement('canvas');
+      c.width = Math.round(video.videoWidth * scale);
+      c.height = Math.round(video.videoHeight * scale);
+      c.getContext('2d').drawImage(video, 0, 0, c.width, c.height);
+      c.toBlob((blob) => {
+        if (!blob) return;
+        posterKeySaved = key;
+        idb.set('bg-poster', { key, blob });
+      }, 'image/jpeg', 0.82);
+    } catch { /* fremde Adresse: Aufnehmen nicht erlaubt */ }
+  }
+
   function showGradient() {
     bgToken++;
     bgLayer.replaceChildren();
     releaseObjectUrl();
+    releasePosterUrl();
     document.body.classList.remove('has-bg', 'bg-bright');
   }
 
@@ -2709,7 +2748,7 @@ body.has-bg.bg-bright {
       src = nextObjectUrl;
       video = (state.blob.type || '').startsWith('video/') || isVideoUrl(state.name || '');
     } else if (state.type === 'apple') {
-      src = pickUrl(state.urls, state.quality);
+      src = pickUrl(state.urls);
       video = true;
       poster = /^https?:/i.test(state.preview || '') ? state.preview : '';
     } else {
@@ -2721,18 +2760,35 @@ body.has-bg.bg-bright {
       return false;
     }
 
+    // Standbild sofort zeigen, während das Video lädt
+    const key = video ? posterKey(state, src) : '';
+    if (video) showPoster(token, key, poster);
+
     try {
       const el = await loadMedia(src, video, poster);
       if (token !== bgToken) { if (nextObjectUrl) URL.revokeObjectURL(nextObjectUrl); return false; }
+      bgShown = token;
       releaseObjectUrl();
       bgObjectUrl = nextObjectUrl;
       el.style.opacity = '0';
-      bgLayer.replaceChildren(el);
+      // Ein schon gezeigtes Standbild bleibt darunter liegen, bis das Video eingeblendet ist
+      const still = [...bgLayer.children].filter((c) => c._poster === token);
+      bgLayer.replaceChildren(...still, el);
+      if (still.length) {
+        el.addEventListener('transitionend', () => {
+          if (bgShown !== token) return;
+          still.forEach((c) => c.remove());
+          releasePosterUrl();
+        }, { once: true });
+      } else {
+        releasePosterUrl();
+      }
       document.body.classList.add('has-bg');
       const lum = measureBackground(el);
       document.body.classList.toggle('bg-bright', lum !== null && lum > 0.6);
       requestAnimationFrame(() => { el.style.opacity = '1'; });
       if (video) {
+        capturePoster(el, key);
         if (reduceMotion) el.pause();
         else el.play().catch(() => { /* Autoplay gesperrt: bleibt auf dem ersten Bild */ });
       }
@@ -2744,8 +2800,15 @@ body.has-bg.bg-bright {
     } catch (err) {
       if (nextObjectUrl) URL.revokeObjectURL(nextObjectUrl);
       if (token === bgToken) {
+        // Standbild eines Videos, das sich nicht laden lässt, wieder entfernen
+        const still = [...bgLayer.children].filter((c) => c._poster === token);
+        if (still.length) {
+          still.forEach((c) => c.remove());
+          releasePosterUrl();
+          if (!bgLayer.children.length) document.body.classList.remove('has-bg', 'bg-bright');
+        }
         setBgMessage(state.type === 'apple'
-          ? 'Dieses Video lässt sich nicht laden. Apple hat es vielleicht entfernt, oder dein Browser kann das Format nicht abspielen. Probiere eine andere Qualität oder ein anderes Video.'
+          ? 'Dieses Video lässt sich nicht laden. Apple hat es vielleicht entfernt, oder dein Browser kann das Format nicht abspielen. Probiere ein anderes Video.'
           : 'Die Datei oder Adresse lässt sich nicht laden. Bei Videos funktionieren am besten MP4 (H.264) und WebM.');
       }
       return false;
@@ -2832,7 +2895,7 @@ body.has-bg.bg-bright {
         h('span', { class: 'bg-label', text: e.label }));
       item.addEventListener('click', () => {
         setBgMessage('');
-        applyBackground({ type: 'apple', id: e.id, label: e.label, preview: e.preview, urls: e.urls, quality: bgQuality.value });
+        applyBackground({ type: 'apple', id: e.id, label: e.label, preview: e.preview, urls: e.urls });
       });
       return item;
     }));
@@ -2877,7 +2940,6 @@ body.has-bg.bg-bright {
 
   function openBgDialog() {
     setBgMessage('');
-    bgQuality.value = bgState.quality || bgQuality.value || 'hd';
     showTab({ apple: 'apple', file: 'file', url: 'url' }[bgState.type] || 'apple');
     renderCatalog();
     bgDialog.showModal();
@@ -2890,10 +2952,6 @@ body.has-bg.bg-bright {
   $('bgLoadApple').addEventListener('click', loadCatalogFromApple);
   $('bgCatalogFile').addEventListener('change', (e) => { loadCatalogFromFile(e.target.files[0]); e.target.value = ''; });
   bgFilter.addEventListener('input', renderCatalog);
-
-  bgQuality.addEventListener('change', () => {
-    if (bgState.type === 'apple') applyBackground({ ...bgState, quality: bgQuality.value });
-  });
 
   $('bgFile').addEventListener('change', async (e) => {
     const file = e.target.files[0];
@@ -2926,14 +2984,15 @@ body.has-bg.bg-bright {
   setLens(store.get('bm-lens') !== '0');
 
   async function restoreBackground() {
+    // Erst den Hintergrund, der (große) Katalog wird erst für den Dialog gebraucht
+    const saved = await idb.get('bg');
+    let applied = null;
+    if (saved && saved.type && saved.type !== 'gradient') {
+      applied = applyBackground(saved, false).then((ok) => { if (!ok) { bgState = { type: 'gradient' }; setBgMessage(''); } });
+    }
     const savedCatalog = await idb.get('bg-catalog');
     if (Array.isArray(savedCatalog)) { catalog = savedCatalog; renderCatalog(); }
-    const saved = await idb.get('bg');
-    if (saved && saved.type && saved.type !== 'gradient') {
-      bgQuality.value = saved.quality || 'hd';
-      const ok = await applyBackground(saved, false);
-      if (!ok) { bgState = { type: 'gradient' }; setBgMessage(''); }
-    }
+    await applied;
   }
 
   /* ---------- Bedienung ---------- */
