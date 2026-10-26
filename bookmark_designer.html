@@ -1327,6 +1327,28 @@ body.has-bg.bg-bright {
     return list;
   }
 
+  // Merkt sich pro Seite, welche Quelle ein großes Icon geliefert hat (oder dass keine es tat).
+  // Beim nächsten Laden wird sie zuerst probiert; das Bild selbst kommt dann aus dem Browser-Cache.
+  // Fehlschläge werden eine Woche lang nicht erneut abgefragt.
+  const ICON_CACHE_KEY = 'bm-icons';
+  const MISS_TTL = 7 * 24 * 3600 * 1000;
+  let iconCache;
+  try { iconCache = JSON.parse(localStorage.getItem(ICON_CACHE_KEY) || '{}') || {}; } catch { iconCache = {}; }
+  const rememberIcon = (key, src) => {
+    if (src && iconCache[key] && iconCache[key].src === src) return;
+    iconCache[key] = { src, t: Date.now() };
+    try { localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(iconCache)); } catch { /* ignorieren */ }
+  };
+
+  function cachedSources(item) {
+    const list = hiresSources(item);
+    const known = iconCache[item.url.origin];
+    if (!known || !list.length) return list;
+    if (!known.src) return Date.now() - known.t < MISS_TTL ? [] : list;
+    const hit = list.find((s) => s.src === known.src);
+    return hit ? [hit, ...list.filter((s) => s !== hit)] : list;
+  }
+
   const toHsl = (r, g, b) => {
     r /= 255; g /= 255; b /= 255;
     const max = Math.max(r, g, b);
@@ -1425,20 +1447,24 @@ body.has-bg.bg-bright {
 
     // Hochauflösende Quellen der Reihe nach probieren; die erste brauchbare ersetzt das Icon
     const startHires = () => {
+      const key = item.url.origin;
+      const sources = cachedSources(item);
+      if (!sources.length) return;
       (function tryNext(list) {
         const s = list.shift();
-        if (!s) return;
+        if (!s) { rememberIcon(key, ''); return; }
         const img = new Image();
         img.alt = '';
         img.decoding = 'async';
         img.onload = () => {
           if (img.naturalWidth < s.min) { tryNext(list); return; }
+          rememberIcon(key, s.src);
           const glyph = s.kind !== 'full' && analysis && !analysis.filled;
           show(img, glyph ? 'glyph-hi' : 'fill');
         };
         img.onerror = () => tryNext(list);
         img.src = s.src;
-      })(hiresSources(item));
+      })(sources);
     };
 
     // Eingebettetes Favicon sofort anzeigen, danach größere Versionen nachladen
