@@ -443,7 +443,7 @@
           dock.getAnimations().forEach((a) => a.cancel());
           const collapsed = {
             opacity: 0,
-            transform: 'translateY(-6px) scaleY(0.06)',
+            transform: 'scaleY(0.06)',
           };
           const shown = {
             opacity: 1,
@@ -454,15 +454,15 @@
             if (animate && !reduceMotion) {
               dock.animate([
                 { ...collapsed, offset: 0 },
-                { ...shown, opacity: 0.96, transform: 'translateY(1px) scaleY(1.025)', offset: 0.78 },
+                { ...shown, opacity: 0.96, transform: 'scaleY(1.025)', offset: 0.78 },
                 shown,
               ], { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
             }
           } else if (animate && !reduceMotion) {
             const a = dock.animate([
               shown,
-              { ...shown, transform: 'translateY(-1px) scaleY(0.9)', offset: 0.3 },
-              { opacity: 0.72, transform: 'translateY(-3px) scaleY(0.42)', offset: 0.75 },
+              { ...shown, transform: 'scaleY(0.9)', offset: 0.3 },
+              { opacity: 0.72, transform: 'scaleY(0.42)', offset: 0.75 },
               collapsed,
             ], { duration: 420, easing: 'cubic-bezier(0.4, 0, 0.8, 0.4)', fill: 'forwards' });
             a.onfinish = () => { if (el.classList.contains('is-closed')) dock.hidden = true; a.cancel(); };
