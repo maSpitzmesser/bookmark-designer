@@ -2077,8 +2077,24 @@ body.has-bg.bg-bright {
   function showDropSpace(dock, idx, apps) {
     if (!dropSpace) dropSpace = h('div', { class: 'drop-space', 'aria-hidden': 'true' });
     const before = apps[idx] || dock.querySelector(':scope > .add-tile');
-    if (dropSpace.parentNode !== dock || dropSpace.nextElementSibling !== before) {
-      dock.insertBefore(dropSpace, before || null);
+    if (dropSpace.parentNode === dock && dropSpace.nextElementSibling === before) return;
+    const previousPositions = new Map(apps.map((app) => {
+      const rect = app.getBoundingClientRect();
+      return [app, { left: rect.left, top: rect.top }];
+    }));
+    dock.insertBefore(dropSpace, before || null);
+    if (reduceMotion) return;
+
+    for (const app of apps) {
+      const previous = previousPositions.get(app);
+      const rect = app.getBoundingClientRect();
+      const dx = previous.left - rect.left;
+      const dy = previous.top - rect.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
+      app.animate([
+        { transform: `translate(${dx}px, ${dy}px)` },
+        { transform: 'none' },
+      ], { duration: 240, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
     }
   }
 
