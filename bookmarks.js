@@ -441,15 +441,12 @@
           el.classList.toggle('is-closed', !open);
           head.setAttribute('aria-expanded', String(open));
           dock.getAnimations().forEach((a) => a.cancel());
-          const dockRadius = getComputedStyle(dock).borderRadius;
           const collapsed = {
             opacity: 0,
-            clipPath: `inset(0 0 100% 0 round ${dockRadius})`,
-            transform: 'translateY(-8px)',
+            transform: 'translateY(-6px) scaleY(0.06)',
           };
           const shown = {
             opacity: 1,
-            clipPath: `inset(0 0 0 0 round ${dockRadius})`,
             transform: 'none',
           };
           if (open) {
@@ -457,23 +454,17 @@
             if (animate && !reduceMotion) {
               dock.animate([
                 { ...collapsed, offset: 0 },
-                { ...shown, opacity: 0.96, transform: 'translateY(2px)', offset: 0.78 },
+                { ...shown, opacity: 0.96, transform: 'translateY(1px) scaleY(1.025)', offset: 0.78 },
                 shown,
-              ], { duration: 340, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+              ], { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
             }
           } else if (animate && !reduceMotion) {
             const a = dock.animate([
               shown,
-              { ...shown, transform: 'translateY(-2px)', offset: 0.12 },
-              {
-                ...shown,
-                opacity: 0.72,
-                clipPath: `inset(0 0 52% 0 round ${dockRadius})`,
-                transform: 'translateY(-5px)',
-                offset: 0.55,
-              },
+              { ...shown, transform: 'translateY(-1px) scaleY(0.9)', offset: 0.3 },
+              { opacity: 0.72, transform: 'translateY(-3px) scaleY(0.42)', offset: 0.75 },
               collapsed,
-            ], { duration: 260, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' });
+            ], { duration: 420, easing: 'cubic-bezier(0.4, 0, 0.8, 0.4)', fill: 'forwards' });
             a.onfinish = () => { if (el.classList.contains('is-closed')) dock.hidden = true; a.cancel(); };
           } else {
             dock.hidden = true;
