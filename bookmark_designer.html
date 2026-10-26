@@ -1356,7 +1356,9 @@ body.has-bg.bg-bright {
   // (Chrome, Edge, Brave, Opera). Überall sonst bleibt es bei Weichzeichner und Glanzlichtern.
   const canRefract = (() => {
     const brands = navigator.userAgentData && navigator.userAgentData.brands;
-    return !!(brands && brands.some((b) => /Chrom/i.test(b.brand)));
+    return brands
+      ? brands.some((b) => /Chrom/i.test(b.brand))
+      : /(?:Chrome|Chromium|Edg|OPR)\//.test(navigator.userAgent);
   })();
 
   // Verschiebungskarte für ein abgerundetes Rechteck: Am Rand zeigt die Verschiebung
