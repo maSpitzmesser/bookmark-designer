@@ -147,11 +147,9 @@ body::before {
 .sec-title {
   width: fit-content;
   max-width: 100%;
-  margin: 0 0 14px 8px;
+  margin: 0;
   font: inherit;
 }
-
-.sec.is-closed .sec-title { margin-bottom: 0; }
 
 /* Gruppenname als Glas-Kapsel, die sich antippen und ein-/ausklappen lässt */
 .sec-head {
